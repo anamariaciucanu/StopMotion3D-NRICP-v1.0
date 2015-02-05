@@ -164,6 +164,8 @@ bool Mesh::loadMesh(const char *_fileName)
      m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position.v[2];
     }
 
+    calculateNormals();
+
     return true;
 }
 
@@ -187,30 +189,32 @@ void Mesh::calculateNormals()
 
   for (unsigned int i=0; i<m_faceCount; i++)
   {
-   int v1 = m_faceIndices->at(3*i);
-   int v2 = m_faceIndices->at(3*i+1);
-   int v3 = m_faceIndices->at(3*i+2);
+   int v1 = m_faceIndices->at(3 * i);
+   int v2 = m_faceIndices->at(3 * i + 1);
+   int v3 = m_faceIndices->at(3 * i + 2);
 
    Vector3f normal(0.0, 0.0, 0.0);
 
-   Vector3f point1(m_vertices->at(3*v1), m_vertices->at(3*v1+1), m_vertices->at(3*v1+2));
-   Vector3f point2(m_vertices->at(3*v2), m_vertices->at(3*v2+1), m_vertices->at(3*v2+2));
-   Vector3f point3(m_vertices->at(3*v3), m_vertices->at(3*v3+1), m_vertices->at(3*v3+2));
+   Vector3f point1(m_vertices->at(3 * v1), m_vertices->at(3 * v1 + 1), m_vertices->at(3 * v1 + 2));
+   Vector3f point2(m_vertices->at(3 * v2), m_vertices->at(3 * v2 + 1), m_vertices->at(3 * v2 + 2));
+   Vector3f point3(m_vertices->at(3 * v3), m_vertices->at(3 * v3 + 1), m_vertices->at(3 * v3 + 2));
 
-   normal = (point2-point1).cross(point3-point2);
+   normal = (point2 - point1).cross(point3 - point2);
 
-   m_normals->at(3*v1) += normal[0];
-   m_normals->at(3*v1+1) += normal[1];
-   m_normals->at(3*v1+2) += normal[2];
+   m_normals->at(3 * v1) += normal[0];
+   m_normals->at(3 * v1 + 1) += normal[1];
+   m_normals->at(3 * v1 + 2) += normal[2];
 
-   m_normals->at(3*v2) += normal[0];
-   m_normals->at(3*v2+1) += normal[1];
-   m_normals->at(3*v2+2) += normal[2];
+   m_normals->at(3 * v2) += normal[0];
+   m_normals->at(3 * v2 + 1) += normal[1];
+   m_normals->at(3 * v2 + 2) += normal[2];
 
-   m_normals->at(3*v3) += normal[0];
-   m_normals->at(3*v3+1) += normal[1];
-   m_normals->at(3*v3+2) += normal[2];
+   m_normals->at(3 * v3) += normal[0];
+   m_normals->at(3 * v3 + 1) += normal[1];
+   m_normals->at(3 * v3 + 2) += normal[2];
   }
+
+  normaliseNormals();
 }
 
 void Mesh::normaliseNormals()
@@ -258,8 +262,7 @@ void Mesh::bindVAO()
     }
 
     if(m_normals->size() > 0)
-    {   normaliseNormals();;
-        glGenBuffers(1, &m_vboNormals);
+    {   glGenBuffers(1, &m_vboNormals);
         glBindBuffer(GL_ARRAY_BUFFER, m_vboNormals);
         glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount  * sizeof(GLfloat), &m_normals->at(0), GL_STATIC_DRAW);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL); //1 corresponds to normals in VAO

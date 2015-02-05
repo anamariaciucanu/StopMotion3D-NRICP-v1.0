@@ -212,7 +212,7 @@ void GLFWContainer::checkMeshIntersection(vec3 _ray)
 void GLFWContainer::calculateTransformation()
 {
  m_nrICP->calculateTransformation();
- m_nrICP->modifyStiffness(-50.0);
+ m_nrICP->modifyStiffness(-10.0);
 }
 
 void GLFWContainer::initializeDrawing()
@@ -318,7 +318,7 @@ void GLFWContainer::loopDrawing()
        glBindVertexArray(m_mesh[1]->getVAO());
        glPointSize(5.0);
        glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       glDrawElements(GL_LINE_STRIP, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
        //update input handling events
        glfwPollEvents();

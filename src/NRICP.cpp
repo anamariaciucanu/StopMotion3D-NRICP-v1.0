@@ -6,7 +6,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_stiffness = 600.0;
-    m_epsilon = 5.0;
+    m_epsilon = 10.0;
     m_gamma = 1.0;
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
@@ -274,7 +274,7 @@ void NRICP::findCorrespondences()
 
           if(previous)
           {
-            findCorrespondences_Naive(i, previous->start, previous->end);
+            findCorrespondences_Normals(i, previous->start, previous->end);
           }
 
           else
@@ -285,12 +285,63 @@ void NRICP::findCorrespondences()
 
 }
 
+void NRICP::findCorrespondences_Normals(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
+  {
+    //Find closest sphere between template and target mesh
+    //Find minimal angle between normals
+
+    std::vector<GLfloat>* normalsTemplate = m_template->getNormals();
+    std::vector<GLfloat>* normalsTarget = m_target->getNormals();
+    std::vector<GLfloat>* vertsTarget = m_target->getVertices();
+
+    Vector3f templateNormal;
+    Vector3f targetNormal;
+    float angle = 0.0;
+    float maxAngle = -1.0;
+    bool foundCorrespondence = false;
+    Vector3f auxUi(0.0, 0.0, 0.0);
+
+    templateNormal(0) = normalsTemplate->at(_templateIndex * 3);
+    templateNormal(1) = normalsTemplate->at(_templateIndex * 3 + 1);
+    templateNormal(2) = normalsTemplate->at(_templateIndex * 3 + 2);
+
+
+    for(unsigned int j=_targetStart; j<=_targetEnd; j++)
+    {
+     targetNormal(0) = normalsTarget->at(j * 3);
+     targetNormal(1) = normalsTarget->at(j * 3 + 1);
+     targetNormal(2) = normalsTarget->at(j * 3 + 2);
+
+     angle = templateNormal.dot(targetNormal);
+
+     if(angle >= 0 && angle <= 1.0 && angle > maxAngle)
+      {
+       auxUi(0) = vertsTarget->at(j * 3);
+       auxUi(1) = vertsTarget->at(j * 3 + 1);
+       auxUi(2) = vertsTarget->at(j * 3 + 2);
+       maxAngle = angle;
+       foundCorrespondence = true;
+      }
+     }
+
+      if(foundCorrespondence)
+      {
+       (*m_U)(_templateIndex, 0) = auxUi(0);
+       (*m_U)(_templateIndex, 1) = auxUi(1);
+       (*m_U)(_templateIndex, 2) = auxUi(2);
+      }
+
+      else
+      {
+        (*m_W)(_templateIndex) = 0.0;
+      }
+  }
+
 void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
   {
       //Find closest points between template and target mesh
       //Store in U
       //Store values in W - see 4.4.
-      //TO DO: Optimize with spheres
 
       std::vector<GLfloat>* vertsTemplate = m_template->getVertices();
       std::vector<GLfloat>* vertsTarget = m_target->getVertices();
