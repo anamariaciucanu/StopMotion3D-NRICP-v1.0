@@ -1,0 +1,347 @@
+#include "glfwcontainer.h"
+#include <stdio.h>
+#include <string>
+
+
+
+GLFWContainer::GLFWContainer(int _width, int _height)
+{
+    m_gl_width = _width;
+    m_gl_height = _height;
+    m_logger = Logger::getInstance();
+    m_meshCount = 0;
+    m_objXRot = 0.0;
+    m_objYRot = 0.0;
+    m_objZRot = 0.0;
+}
+
+GLFWContainer::~GLFWContainer()
+{
+    if(m_camera)
+    {
+        delete m_camera;
+    }
+
+    if(m_shader)
+    {
+        delete m_shader;
+    }
+
+    if(m_nrICP)
+    {
+        delete m_nrICP;
+    }
+
+    int i=0;
+
+    while (m_mesh[i] != NULL)
+    {
+        delete m_mesh[i];
+        i++;
+    }
+
+//    if(m_window)
+    {
+//        delete m_window;
+    }
+
+}
+
+bool GLFWContainer::initializeWindow()
+{
+
+    //Starting the error log
+    assert(m_logger->restart_gl_log());
+    //Start GL context and OS window using the GLFW helper library
+    m_logger->gl_log("Starting GLFW\n%s\n", glfwGetVersionString());
+
+   //Start GL context and OS window using the GLFW helper library
+   if(!glfwInit())
+   {
+    fprintf(stderr, "ERROR:could not start GLFW3\n");
+    return false;
+   }
+
+  m_window = glfwCreateWindow(m_gl_width, m_gl_height, "Stop Motion 3D", NULL, NULL);
+  m_camera = new Camera(m_gl_width, m_gl_height);
+
+ if (!m_window)
+ {
+  fprintf(stderr, "ERROR:could not open window with GLFW3\n");
+  glfwTerminate();
+  return false;
+ }
+
+ glfwMakeContextCurrent(m_window);
+ //Log info
+ m_logger->log_gl_params();
+ return true;
+}
+
+void GLFWContainer::loadMesh(const char* _fileName)
+{
+    m_mesh[m_meshCount] = new Mesh();
+    if(m_mesh[m_meshCount]->loadMesh(_fileName))
+    {
+     if(m_mesh[m_meshCount]->getNormals()->size()<1)
+     {
+         m_mesh[m_meshCount]->calculateNormals();
+     }
+     m_mesh[m_meshCount]->bindVAO();
+     m_meshCount++;
+    }
+    else
+    {
+        printf("Mesh could not be loaded from file %s", _fileName);
+    }
+}
+
+void GLFWContainer::update_fps_counter()
+{
+     static double previous_seconds = glfwGetTime();
+     static int frame_count = 0;
+     double current_seconds = glfwGetTime();
+     double elapsed_seconds = current_seconds - previous_seconds;
+
+     if(elapsed_seconds > 0.25)
+     {
+          previous_seconds = current_seconds;
+          double fps = (double)(frame_count/elapsed_seconds);
+          char tmp[128];
+          sprintf(tmp, "opengl @ fps: %.2f", fps);
+          glfwSetWindowTitle(m_window, tmp);
+          frame_count = 0;
+     }
+     frame_count++;
+}
+
+void GLFWContainer::update_camera_position()
+ {
+     static double previous_seconds = glfwGetTime();
+     double current_seconds = glfwGetTime();
+     double elapsed_seconds = current_seconds - previous_seconds;
+
+     if(elapsed_seconds > 0.2)
+     {
+          previous_seconds = current_seconds;
+          char tmp[128];
+          sprintf(tmp, "Camera (%.2f, %.2f, %.2f)", m_camera->x(), m_camera->y(), m_camera->z());
+          glfwSetWindowTitle(m_window, tmp);
+     }
+ }
+
+void GLFWContainer::checkKeyPress()
+{
+    //To Do: put separate
+    static double previous_seconds = glfwGetTime();
+    double current_seconds = glfwGetTime();
+    double elapsed_seconds = current_seconds - previous_seconds;
+    previous_seconds = current_seconds;
+
+
+    //control keys
+
+    if(glfwGetKey(m_window, GLFW_KEY_A)){
+      m_camera->translate(0, -m_camera->getSpeed() * elapsed_seconds);
+      m_camera->setMoved(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_D)){
+      m_camera->translate(0, m_camera->getSpeed() * elapsed_seconds);
+      m_camera->setMoved(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_PAGE_UP)){
+      m_camera->translate(1, m_camera->getSpeed() * elapsed_seconds);
+      m_camera->setMoved(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_PAGE_DOWN)){
+      m_camera->translate(1, -m_camera->getSpeed() * elapsed_seconds);
+      m_camera->setMoved(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_W)){
+      m_camera->translate(2, -m_camera->getSpeed() * elapsed_seconds);
+      m_camera->setMoved(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_S)){
+      m_camera->translate(2, m_camera->getSpeed() * elapsed_seconds);
+      m_camera->setMoved(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_R)){
+     m_objXRot += 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_E)){
+     m_objXRot -= 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_F)){
+     m_objYRot += 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_G)){
+     m_objYRot -= 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_V)){
+     m_objZRot += 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_B)){
+     m_objZRot -= 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_T))
+    {
+     calculateTransformation();
+     m_nrICP->getTemplate()->calculateNormals();
+     m_nrICP->getTemplate()->bindVAO();
+     sleep(0.5);
+    }
+}
+
+void GLFWContainer::checkMeshIntersection(vec3 _ray)
+{
+  m_shader->sendCameraRayToShader(_ray);
+}
+
+void GLFWContainer::calculateTransformation()
+{
+ m_nrICP->calculateTransformation();
+ m_nrICP->modifyStiffness(-50.0);
+}
+
+void GLFWContainer::initializeDrawing()
+{
+    //Drawining inits =========================================================================
+    //start GLEW extension handler
+    glewExperimental = GL_TRUE;
+    glewInit();
+
+    //near clipping plane
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS); //smaller value as closer
+
+    //drawing prefs
+    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
+    glfwWindowHint(GLFW_SAMPLES, 4);
+
+
+    //Load a scene ============================================================================
+    m_mesh = new Mesh*;
+    loadMesh("../../Models/LowRes_TPose/Rob_Obj_TPose_LowRes.obj");
+    //loadMesh("../../Models/Cube1.obj");
+    loadMesh("../../Models/LowRes_Frame2/Rob_Obj_Frame2_LowRes.obj");
+
+    //Nonrigid Iterative Closest Point ========================================================
+    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+
+    //Transformations =========================================================================
+     //Model matrix
+     //column major matrix - that's how shaders prefer it
+     m_modelMat = identity_mat4();
+
+     //View matrix
+     mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
+     mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
+     m_viewMat = R*T;
+
+     //Projection matrix
+     //Change when resizing window
+     m_projMat = mat4(
+         m_camera->getSx(), 0.0f, 0.0f, 0.0f,
+         0.0f, m_camera->getSy(), 0.0f, 0.0f,
+         0.0f, 0.0f, m_camera->getSz(), -1.0f,
+         0.0f, 0.0f, m_camera->getPz(), 0.0f
+     );
+
+    //Shaders ===========================================================================
+    m_shader = new Shader("../shaders/test.vert", "../shaders/test.frag");
+
+    //Matrix sending to shader ==========================================================
+    m_shader->sendModelMatrixToShader(&m_modelMat);
+    m_shader->sendViewMatrixToShader(&m_viewMat);
+    m_shader->sendProjMatrixToShader(&m_projMat);
+}
+
+void GLFWContainer::loopDrawing()
+{
+    m_camera->setMoved(false);
+    vec3 col1 = vec3(0.9, 0.6, 0.3);
+    vec3 col2 = vec3(0.3, 0.6, 0.9);
+
+    while (!glfwWindowShouldClose(m_window))
+    {
+      checkKeyPress();
+
+     //Update Model Matrix ==========================================================================
+      m_modelMat = identity_mat4();
+
+      mat4 Rx = rotate_x_deg(identity_mat4(),  m_objXRot);
+      mat4 Ry = rotate_y_deg(identity_mat4(),  m_objYRot);
+      mat4 Rz = rotate_z_deg(identity_mat4(),  m_objZRot);
+      m_modelMat = Rz*Ry*Rx*m_modelMat;
+      m_shader->sendModelMatrixToShader(&m_modelMat);
+
+      //Update View matrix ==========================================================================
+      if(m_camera->getMoved()){
+         mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
+         mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
+         m_viewMat = R*T;
+         m_shader->sendViewMatrixToShader(&m_viewMat);
+         m_camera->setMoved(false);
+      }
+
+    //General drawing loop ==========================================================================
+       //update_fps_counter();
+       update_camera_position();
+       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+       glViewport(0, 0, m_gl_width, m_gl_height);
+       glEnable(GL_CULL_FACE);
+       glCullFace(GL_BACK);
+       glFrontFace(GL_CCW);
+
+   //Draw mesh 1 ===============================template==============================================
+       m_shader->sendColourChoiceToShader(col1);
+       glUseProgram(m_shader->getShaderProgramme());
+       glBindVertexArray(m_mesh[0]->getVAO());
+       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       //glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+
+   //Draw mesh 2 =================================target===============================================
+       m_shader->sendColourChoiceToShader(col2);
+       glUseProgram(m_shader->getShaderProgramme());
+       glBindVertexArray(m_mesh[1]->getVAO());
+       glPointSize(5.0);
+       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       glDrawElements(GL_LINE_STRIP, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+
+       //update input handling events
+       glfwPollEvents();
+
+       //Put stuff on display
+       glfwSwapBuffers(m_window);
+
+       //Exit on key press
+       if(GLFW_PRESS == glfwGetKey(m_window, GLFW_KEY_ESCAPE))
+        {
+         glfwSetWindowShouldClose(m_window, 1);
+        }
+    }
+
+    //close GL contextand any other GLFW resources
+    glfwTerminate();
+}
+
+void GLFWContainer::printConfiguration()
+{
+    //get version info
+    const GLubyte* renderer = glGetString(GL_RENDERER);
+    const GLubyte* version = glGetString(GL_VERSION);
+    printf("Renderer: %s\n", renderer);
+    printf("OpenGL version supported %s\n", version);
+}
