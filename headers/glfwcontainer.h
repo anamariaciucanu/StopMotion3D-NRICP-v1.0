@@ -19,7 +19,7 @@ private:
     Logger* m_logger;
     GLFWwindow* m_window;
     Mesh** m_mesh;
-    int m_meshCount;
+    unsigned int m_meshCount;
     Camera* m_camera;
     Shader* m_shader;
     mat4 m_modelMat;

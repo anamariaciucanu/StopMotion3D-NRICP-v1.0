@@ -45,6 +45,7 @@ public:
     bool loadMesh(const char* _fileName);
     void calculateNormals();
     void normaliseNormals();
+    void normaliseMesh();
     void bindVAO();
     void buildArcNodeMatrix();
     void buildVertexMatrix();

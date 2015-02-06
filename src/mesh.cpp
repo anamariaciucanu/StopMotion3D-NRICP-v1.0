@@ -207,7 +207,7 @@ void Mesh::calculateNormals()
    Vector3f point2(m_vertices->at(three_v2), m_vertices->at(three_v2 + 1), m_vertices->at(three_v2 + 2));
    Vector3f point3(m_vertices->at(three_v3), m_vertices->at(three_v3 + 1), m_vertices->at(three_v3 + 2));
 
-   normal = (point2 - point1).cross(point3 - point2);
+   normal = (10*(point2 - point1)).cross(10*(point3 - point2));
 
    m_normals->at(three_v1) += normal[0];
    m_normals->at(three_v1 + 1) += normal[1];
@@ -248,6 +248,48 @@ void Mesh::normaliseNormals()
     }
 }
 
+void Mesh::normaliseMesh()
+{
+    //Find min and max for x, y, z
+
+    float min_x = 1000.0;
+    float min_y = 1000.0;
+    float min_z = 1000.0;
+    float max_x = -1000.0;
+    float max_y = -1000.0;
+    float max_z = -1000.0;
+    float aux;
+    unsigned int three_i;
+
+    for (unsigned int i = 0; i < m_vertCount; ++i)
+    {
+        three_i = 3*i;
+
+        aux = m_vertices->at(three_i);
+        if(aux < min_x) { min_x = aux;}
+        else if (aux > max_x) { max_x = aux;}
+
+        aux = m_vertices->at(three_i + 1);
+        if(aux < min_y) { min_y = aux;}
+        else if (aux > max_y) { max_y = aux;}
+
+        aux = m_vertices->at(three_i + 2);
+        if(aux < min_z) { min_z = aux;}
+        else if (aux > max_z) { max_z = aux;}
+    }
+
+    for (unsigned int i = 0; i < m_vertCount; ++i)
+    {
+        three_i = 3*i;
+        float x  = m_vertices->at(three_i);
+        float y = m_vertices->at(three_i + 1);
+        float z = m_vertices->at(three_i + 2) ;
+
+        m_vertices->at(three_i) = 2.0 * (x - min_x) / (max_x - min_x) - 1.0;
+        m_vertices->at(three_i + 1) = 2.0 * (y - min_y) / (max_y - min_y) - 1.0;
+        m_vertices->at(three_i + 2) = 2.0 * (z - min_z) / (max_z - min_z) - 1.0;
+    }
+}
 
 void Mesh::bindVAO()
 {
@@ -352,6 +394,7 @@ void Mesh::buildArcNodeMatrix()
 
          m_M->coeffRef(k, v1) = -1;
          m_M->coeffRef(k, v2) = 1;
+         k++;
     }
     m_M->makeCompressed();
 }
