@@ -233,10 +233,9 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     m_mesh = new Mesh*;
-    //loadMesh("../../Models/LowRes_TPose/Rob_Obj_TPose_LowRes.obj");
-    loadMesh("../../Models/Creature.obj");
-    loadMesh("../../Models/Cube1.obj");
-    //loadMesh("../../Models/LowRes_Frame2/Rob_Obj_Frame2_LowRes.obj");
+    loadMesh("../../Models/LowRes_TPose/Rob_Obj_TPose_LowRes.obj");
+    //loadMesh("../../Models/Cube1.obj");
+    loadMesh("../../Models/LowRes_Frame2/Rob_Obj_Frame2_LowRes.obj");
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
