@@ -209,13 +209,9 @@ void GLFWContainer::checkKeyPress()
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
      m_nrICP->calculateTransformation();
+     m_nrICP->modifyStiffness(-10.0);
      m_nrICP->getTemplate()->bindVAO();
      sleep(0.5);
-    }
-
-    else if(glfwGetKey(m_window, GLFW_KEY_Y))
-    {
-     m_nrICP->modifyStiffness(-10.0);
     }
 }
 
