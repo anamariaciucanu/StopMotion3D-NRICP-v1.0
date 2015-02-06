@@ -164,8 +164,6 @@ bool Mesh::loadMesh(const char *_fileName)
      m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position.v[2];
     }
 
-    calculateNormals();
-
     return true;
 }
 
@@ -173,45 +171,55 @@ void Mesh::calculateNormals()
 {
   if(m_normals->size()<1)
   {
-      for(unsigned int k=0; k<m_vertices->size(); k++)
+      for(unsigned int k=0; k<m_vertices->size(); ++k)
       {
        m_normals->push_back(0.0);
       }
   }
   else
   {
-    for(unsigned int k=0; k<m_normals->size(); k++)
+    for(unsigned int k=0; k<m_normals->size(); ++k)
     {
      m_normals->at(k) = 0.0;
     }
   }
 
+  unsigned int three_i;
+  unsigned short v1;
+  unsigned short v2;
+  unsigned short v3;
+  unsigned int three_v1;
+  unsigned int three_v2;
+  unsigned int three_v3;
 
-  for (unsigned int i=0; i<m_faceCount; i++)
+  for (unsigned int i = 0; i < m_faceCount; ++i)
   {
-   int v1 = m_faceIndices->at(3 * i);
-   int v2 = m_faceIndices->at(3 * i + 1);
-   int v3 = m_faceIndices->at(3 * i + 2);
+   three_i = 3 * i;
+   v1 = m_faceIndices->at(three_i);
+   v2 = m_faceIndices->at(three_i + 1);
+   v3 = m_faceIndices->at(three_i + 2);
+   three_v1 = 3 * v1;
+   three_v2 = 3 * v2;
+   three_v3 = 3 * v3;
 
    Vector3f normal(0.0, 0.0, 0.0);
-
-   Vector3f point1(m_vertices->at(3 * v1), m_vertices->at(3 * v1 + 1), m_vertices->at(3 * v1 + 2));
-   Vector3f point2(m_vertices->at(3 * v2), m_vertices->at(3 * v2 + 1), m_vertices->at(3 * v2 + 2));
-   Vector3f point3(m_vertices->at(3 * v3), m_vertices->at(3 * v3 + 1), m_vertices->at(3 * v3 + 2));
+   Vector3f point1(m_vertices->at(three_v1), m_vertices->at(three_v1 + 1), m_vertices->at(three_v1 + 2));
+   Vector3f point2(m_vertices->at(three_v2), m_vertices->at(three_v2 + 1), m_vertices->at(three_v2 + 2));
+   Vector3f point3(m_vertices->at(three_v3), m_vertices->at(three_v3 + 1), m_vertices->at(three_v3 + 2));
 
    normal = (point2 - point1).cross(point3 - point2);
 
-   m_normals->at(3 * v1) += normal[0];
-   m_normals->at(3 * v1 + 1) += normal[1];
-   m_normals->at(3 * v1 + 2) += normal[2];
+   m_normals->at(three_v1) += normal[0];
+   m_normals->at(three_v1 + 1) += normal[1];
+   m_normals->at(three_v1 + 2) += normal[2];
 
-   m_normals->at(3 * v2) += normal[0];
-   m_normals->at(3 * v2 + 1) += normal[1];
-   m_normals->at(3 * v2 + 2) += normal[2];
+   m_normals->at(three_v2) += normal[0];
+   m_normals->at(three_v2 + 1) += normal[1];
+   m_normals->at(three_v2 + 2) += normal[2];
 
-   m_normals->at(3 * v3) += normal[0];
-   m_normals->at(3 * v3 + 1) += normal[1];
-   m_normals->at(3 * v3 + 2) += normal[2];
+   m_normals->at(three_v3) += normal[0];
+   m_normals->at(three_v3 + 1) += normal[1];
+   m_normals->at(three_v3 + 2) += normal[2];
   }
 
   normaliseNormals();
@@ -219,7 +227,8 @@ void Mesh::calculateNormals()
 
 void Mesh::normaliseNormals()
 {
-    unsigned int three_i = 0;
+    unsigned int three_i;
+
     for(unsigned int i = 0; i < m_vertCount; i++)
     {
       float magnitude = 0.0;
@@ -228,9 +237,9 @@ void Mesh::normaliseNormals()
       float x = m_normals->at(three_i);
       float y = m_normals->at(three_i + 1);
       float z = m_normals->at(three_i + 2);
-      magnitude = sqrt(x*x+y*y+z*z);
+      magnitude = sqrt(x * x + y * y + z * z);
 
-      if(abs(magnitude) > 1.0)
+      if(abs(magnitude) > 1.5)
       {
         m_normals->at(three_i) /= magnitude;
         m_normals->at(three_i + 1) /= magnitude;

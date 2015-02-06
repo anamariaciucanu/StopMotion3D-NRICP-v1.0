@@ -10,12 +10,12 @@ vec3 Ld = vec3(1.0, 1.0, 1.0); // diffuser light colour
 vec3 La = vec3(0.3, 0.3, 0.3); // ambient light colour
 
 //Surface reflectance
-vec3 Ks = vec3(0.1, 0.1, 0.1); // fully reflects specular light
+vec3 Ks = vec3(0.2, 0.2, 0.2); // fully reflects specular light
 vec3 Kd = col_choice_frag;
 vec3 Kpicked = vec3(1.0, 0.0, 0.0); //triangle was picked
 vec3 Ka = vec3(0.8, 0.8, 0.8); // fully reflect ambient light
 
-float specular_exponent = 400.0; // specular power
+float specular_exponent = 100.0; // specular power
 out vec4 frag_colour;
 
 void main()

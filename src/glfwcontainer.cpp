@@ -207,7 +207,6 @@ void GLFWContainer::checkKeyPress()
     {
      m_nrICP->calculateTransformation();
      m_nrICP->modifyStiffness(-10.0);
-     m_nrICP->getTemplate()->calculateNormals();
      m_nrICP->getTemplate()->bindVAO();
      sleep(0.5);
     }
@@ -312,6 +311,7 @@ void GLFWContainer::loopDrawing()
        glFrontFace(GL_CCW);
 
    //Draw mesh 1 ===============================template==============================================
+       m_mesh[0]->calculateNormals();
        m_shader->sendColourChoiceToShader(col1);
        glUseProgram(m_shader->getShaderProgramme());
        glBindVertexArray(m_mesh[0]->getVAO());
