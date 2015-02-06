@@ -5,9 +5,9 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
     m_target = _target;
-    m_stiffness = 600.0;
+    m_stiffness = 200.0;
     m_epsilon = 10.0;
-    m_gamma = 1.0;
+    m_gamma = 5.0;
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
 
@@ -51,7 +51,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 
 
 //Aux
-   myfile.open("../logs/times3.txt");
+   myfile.open("../logs/times6.txt");
 }
 
 NRICP::~NRICP()
@@ -89,6 +89,9 @@ NRICP::~NRICP()
 
 SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition)
 {
+    unsigned int three_i;
+
+
     //Observation: This assumes vertex data is in order
     _partition = new SpherePartition();
     _partition->start = _start;
@@ -100,11 +103,12 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
     std::vector<GLfloat>* targetVertices = m_target->getVertices();
 
 
-    for(unsigned int i=_start; i<=_end; i++)
+    for(unsigned int i=_start; i<=_end; ++i)
     {
-      _partition->average[0] += targetVertices->at(3*i);
-      _partition->average[1] += targetVertices->at(3*i+1);
-      _partition->average[2] += targetVertices->at(3*i+2);
+      three_i = 3*i;
+      _partition->average[0] += targetVertices->at(three_i);
+      _partition->average[1] += targetVertices->at(three_i + 1);
+      _partition->average[2] += targetVertices->at(three_i + 2);
     }
 
      unsigned int noElem = _end - _start + 1;
@@ -153,7 +157,6 @@ void NRICP::calculateTransformation()
 
     MatrixXf* X_prev = new MatrixXf(4 * m_templateVertCount, 3);
     X_prev->setZero(4 * m_templateVertCount, 3);
-
 
     previous_seconds = glfwGetTime();
     findCorrespondences();
@@ -209,9 +212,9 @@ float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
     float diff = 0.0;
     unsigned int floatCount = 4 * m_templateVertCount;
 
-    for(unsigned int i=0; i < floatCount; i++)
+    for(unsigned int i=0; i < floatCount; ++i)
     {
-        for(unsigned int j=0; j<3; j++)
+        for(unsigned int j=0; j<3; ++j)
         {
             diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
             norm += diff*diff;
@@ -226,12 +229,14 @@ void NRICP::findCorrespondences()
       Vector3f templateVertex;
       float distance_left = 0.0;
       float distance_right = 0.0;
+      unsigned int three_i;
 
-      for (unsigned int i = 0; i < m_templateVertCount;i++)
+      for (unsigned int i = 0; i < m_templateVertCount; ++i)
       {
-          templateVertex(0) = vertsTemplate->at(i*3);
-          templateVertex(1) = vertsTemplate->at(i*3+1);
-          templateVertex(2) = vertsTemplate->at(i*3+2);
+          three_i = 3*i;
+          templateVertex(0) = vertsTemplate->at(three_i);
+          templateVertex(1) = vertsTemplate->at(three_i + 1);
+          templateVertex(2) = vertsTemplate->at(three_i + 2);
           SpherePartition* previous = NULL;
           SpherePartition* aux = NULL;
           SpherePartition* current = m_targetPartition;
@@ -274,7 +279,7 @@ void NRICP::findCorrespondences()
 
           if(previous)
           {
-            findCorrespondences_Normals(i, previous->start, previous->end);
+            findCorrespondences_Naive(i, previous->start, previous->end);
           }
 
           else
@@ -306,7 +311,7 @@ void NRICP::findCorrespondences_Normals(unsigned int _templateIndex, unsigned in
     templateNormal(2) = normalsTemplate->at(_templateIndex * 3 + 2);
 
 
-    for(unsigned int j=_targetStart; j<=_targetEnd; j++)
+    for(unsigned int j=_targetStart; j<=_targetEnd; ++j)
     {
      targetNormal(0) = normalsTarget->at(j * 3);
      targetNormal(1) = normalsTarget->at(j * 3 + 1);
@@ -345,7 +350,6 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
 
       std::vector<GLfloat>* vertsTemplate = m_template->getVertices();
       std::vector<GLfloat>* vertsTarget = m_target->getVertices();
-
       Vector3f templateVertex;
       Vector3f targetVertex;
       float distance = 0.0;
@@ -353,16 +357,18 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
       bool foundCorrespondence = false;
       unsigned int targetIndex = 0;
       Vector3f auxUi(0.0, 0.0, 0.0);
+      unsigned int three_j;
 
-      templateVertex(0) = vertsTemplate->at(_templateIndex*3);
-      templateVertex(1) = vertsTemplate->at(_templateIndex*3+1);
-      templateVertex(2) = vertsTemplate->at(_templateIndex*3+2);
+      templateVertex(0) = vertsTemplate->at(_templateIndex * 3);
+      templateVertex(1) = vertsTemplate->at(_templateIndex * 3 + 1);
+      templateVertex(2) = vertsTemplate->at(_templateIndex * 3 + 2);
 
-      for(unsigned int j=_targetStart; j<=_targetEnd; j++)
+      for(unsigned int j=_targetStart; j<=_targetEnd; ++j)
       {
-       targetVertex(0) = vertsTarget->at(j*3);
-       targetVertex(1) = vertsTarget->at(j*3+1);
-       targetVertex(2) = vertsTarget->at(j*3+2);
+       three_j = 3*j;
+       targetVertex(0) = vertsTarget->at(three_j);
+       targetVertex(1) = vertsTarget->at(three_j + 1);
+       targetVertex(2) = vertsTarget->at(three_j + 2);
 
        distance = euclideanDistance(templateVertex, targetVertex);
        if(distance < minDistance)
@@ -412,11 +418,11 @@ void NRICP::determineOptimalDeformation()
     int weight;
     unsigned short vertPerEdge;
 
-    for(unsigned int i=0; i<m_templateEdgeCount; i++)
+    for(unsigned int i=0; i<m_templateEdgeCount; ++i)
      {
        four_i = 4*i;
        vertPerEdge = 0;
-       for(unsigned int j=0; j<m_templateVertCount && vertPerEdge <= 2; j++)
+       for(unsigned int j=0; j<m_templateVertCount && vertPerEdge <= 2; ++j)
        {
         auxValue = m_stiffness * (m_M->coeff(i, j));
 
@@ -433,7 +439,7 @@ void NRICP::determineOptimalDeformation()
      }
 
 
-    for(unsigned int i = 0; i < m_templateVertCount; i++)
+    for(unsigned int i = 0; i < m_templateVertCount; ++i)
     {
         auxRowIndex = i + 4 * m_templateEdgeCount;
         four_i = 4 * i;
@@ -475,7 +481,7 @@ void NRICP::deformTemplate()
 
       //Change point values in m_D, which will change them in the mesh
       //Change points in the mesh
-      for(unsigned int i = 0; i < m_templateVertCount; i++)
+      for(unsigned int i = 0; i < m_templateVertCount; ++i)
       {
         four_i = 4 * i;
         m_D->coeffRef(i, four_i) = auxMultiplication(i, 0);

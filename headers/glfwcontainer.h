@@ -35,12 +35,12 @@ public:
     bool initializeWindow();
     void initializeDrawing();
     void loadMesh(const char *_fileName);
+    void normaliseMeshes();
     void loopDrawing();
     void checkKeyPress();
     void checkMeshIntersection(vec3 _ray);
     void update_fps_counter();
     void update_camera_position();
-    void calculateTransformation();
     void printConfiguration();
 
     //Setters and getters

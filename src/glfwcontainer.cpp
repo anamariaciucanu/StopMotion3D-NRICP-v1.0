@@ -96,6 +96,14 @@ void GLFWContainer::loadMesh(const char* _fileName)
     }
 }
 
+
+void GLFWContainer::normaliseMeshes()
+{
+    for(unsigned int i=0; i<m_meshCount; i++)
+    {}
+}
+
+
 void GLFWContainer::update_fps_counter()
 {
      static double previous_seconds = glfwGetTime();
@@ -197,7 +205,8 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
-     calculateTransformation();
+     m_nrICP->calculateTransformation();
+     m_nrICP->modifyStiffness(-10.0);
      m_nrICP->getTemplate()->calculateNormals();
      m_nrICP->getTemplate()->bindVAO();
      sleep(0.5);
@@ -209,11 +218,6 @@ void GLFWContainer::checkMeshIntersection(vec3 _ray)
   m_shader->sendCameraRayToShader(_ray);
 }
 
-void GLFWContainer::calculateTransformation()
-{
- m_nrICP->calculateTransformation();
- m_nrICP->modifyStiffness(-10.0);
-}
 
 void GLFWContainer::initializeDrawing()
 {
@@ -233,10 +237,12 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     m_mesh = new Mesh*;
-    loadMesh("../../Models/LowRes_TPose/Rob_Obj_TPose_LowRes.obj");
+    //loadMesh("../../Models/Creature.obj");
     //loadMesh("../../Models/Cube1.obj");
+    loadMesh("../../Models/LowRes_TPose/Rob_Obj_TPose_LowRes.obj");
     loadMesh("../../Models/LowRes_Frame2/Rob_Obj_Frame2_LowRes.obj");
 
+    //normaliseMeshes();
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
 
