@@ -294,58 +294,66 @@ void Mesh::bindVAO()
 
 void Mesh::buildArcNodeMatrix()
 {
-  //TO DO: Release memory
-
   //Create the arc-node adjacency matrix
-    MatrixXi* adjMatrix = new MatrixXi(m_vertCount, m_vertCount);
-    adjMatrix->setZero(m_vertCount, m_vertCount);
-    unsigned int three_i = 0;
 
-    for (unsigned int i = 0; i < m_faceCount; i++)
+    std::map <std::pair<unsigned int, unsigned int>, int > adjMap;
+    std::map <std::pair<unsigned int, unsigned int>, int >::iterator it;
+    unsigned int three_i;
+    unsigned int v1;
+    unsigned int v2;
+    unsigned int v3;
+    unsigned int min;
+    unsigned int max;
+
+    for (unsigned int i = 0; i < m_faceCount; ++i)
     {
         three_i = 3*i;
-        int v1 = m_faceIndices->at(three_i);
-        int v2 = m_faceIndices->at(three_i + 1);
-        int v3 = m_faceIndices->at(three_i + 2);
+        v1 = m_faceIndices->at(three_i);
+        v2 = m_faceIndices->at(three_i + 1);
+        v3 = m_faceIndices->at(three_i + 2);
 
-        if((*adjMatrix)(v2, v1) == 0)
+        min = v1 < v2? v1:v2;
+        max = v1 > v2? v1:v2;
+        it = adjMap.find(make_pair(min, max));
+        if(it == adjMap.end())
         {
-            (*adjMatrix)(v1, v2) = 1;
+            adjMap.insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
             m_edgeCount++;
         }
 
-        if((*adjMatrix)(v3, v2) == 0)
+        min = v2 < v3? v2:v3;
+        max = v2 > v3? v2:v3;
+        it = adjMap.find(make_pair(min, max));
+        if(it == adjMap.end())
         {
-            (*adjMatrix)(v2, v3) = 1;
+            adjMap.insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
             m_edgeCount++;
         }
 
-        if((*adjMatrix)(v1, v3) == 0)
+        min = v1 < v3 ? v1 : v3;
+        max = v1 > v3 ? v1 : v3;
+        it = adjMap.find(make_pair(min, max));
+        if(it == adjMap.end())
         {
-            (*adjMatrix)(v3, v1) = 1;
+            adjMap.insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
             m_edgeCount++;
         }
     }
 
-  m_M = new SparseMatrix<int>(m_edgeCount, m_vertCount);
-  m_M->reserve(m_edgeCount * 2);
-  unsigned int k = 0;
+    m_M = new SparseMatrix<int>(m_edgeCount, m_vertCount);
+    m_M->reserve(m_edgeCount * 2);
+    unsigned int k = 0;
 
-  for(unsigned int i=0; i < m_vertCount; i++)
-  {
-   for(unsigned int j=0; j < m_vertCount; j++)
-   {
-      if((*adjMatrix)(i, j) == 1)
-      {
-       m_M->insert(k, i) = -1;
-       m_M->insert(k, j) = 1;
-       k++;
-      }
+    for(it = adjMap.begin(); it != adjMap.end(); ++it)
+    {
+
+        v1 = it->first.first;
+        v2 = it->first.second;
+
+         m_M->coeffRef(k, v1) = -1;
+         m_M->coeffRef(k, v2) = 1;
     }
-  }
-  m_M->makeCompressed();
-
-  delete adjMatrix;
+    m_M->makeCompressed();
 }
 
 void Mesh::buildVertexMatrix()
