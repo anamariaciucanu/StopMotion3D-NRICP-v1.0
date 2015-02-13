@@ -29,7 +29,7 @@ private:
     unsigned int m_vertCount;
     unsigned int m_faceCount;
     unsigned int m_texCoordCount;
-    SparseMatrix<int>* m_M;
+    std::map <std::pair<unsigned int, unsigned int>, short >* m_adjMat;
     SparseMatrix<float>* m_D;
 
     GLuint m_vboPosition;
@@ -60,7 +60,7 @@ public:
     unsigned int getTexCoordCount() { return m_texCoordCount;}
     GLuint getVAO() { return m_vao;}
     void setVAO(GLuint _vao) { m_vao = _vao;}
-    SparseMatrix<int>* getM(){ return m_M;}
+    std::map <std::pair<unsigned int, unsigned int>, short >* getAdjMat(){ return m_adjMat;}
     SparseMatrix<float>* getD(){ return m_D;}
     float x() { return m_position.v[0]; }
     float y() { return m_position.v[1]; }

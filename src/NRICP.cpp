@@ -11,12 +11,12 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
 
-// Defining M ============================================
-    m_M = m_template->getM();
-    if(!m_M)
+// Defining adjMat ============================================
+    m_adjMat = m_template->getAdjMat();
+    if(!m_adjMat)
     {
       m_template->buildArcNodeMatrix();
-      m_M = m_template->getM();
+      m_adjMat = m_template->getAdjMat();
     }
 
 // Defining W =================NEW========================
@@ -418,36 +418,42 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
 void NRICP::determineOptimalDeformation()
   {
     //Find X = (At*A)-1 * At * B
-    //For current stiffness alpha
+    //For current stiffness
 
-    float auxValue = 0.0;
-    unsigned int four_i;
-    unsigned int four_j;
+    unsigned int i = 0;
+    unsigned int four_i = 0;
+    unsigned int v1;
+    unsigned int v2;
+    unsigned int four_v1;
+    unsigned int four_v2;
     unsigned int auxRowIndex;
     int weight;
-    unsigned short vertPerEdge;
 
-    for(unsigned int i=0; i<m_templateEdgeCount; ++i)
+//stiffness * M o G
+    for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
-       four_i = 4*i;
-       vertPerEdge = 0;
-       for(unsigned int j=0; j<m_templateVertCount && vertPerEdge <= 2; ++j)
-       {
-        auxValue = m_stiffness * (m_M->coeff(i, j));
+       four_i = 4 * i;
 
-        if(auxValue > 0.0 || auxValue < 0.0)
-        {
-         four_j = 4*j;
-         vertPerEdge ++;
-         m_A->coeffRef(four_i,four_j) = auxValue;
-         m_A->coeffRef(four_i + 1,four_j + 1) = auxValue;
-         m_A->coeffRef(four_i + 2,four_j + 2) = auxValue;
-         m_A->coeffRef(four_i + 3,four_j + 3) = auxValue * m_gamma;
-        }
-       }
+       v1 = it->first.first;
+       four_v1 = 4 * v1;
+
+       m_A->coeffRef(four_i, four_v1) = -m_stiffness;
+       m_A->coeffRef(four_i + 1, four_v1 + 1) = -m_stiffness;
+       m_A->coeffRef(four_i + 2, four_v1 + 2) = -m_stiffness;
+       m_A->coeffRef(four_i + 3, four_v1 + 3) = -m_stiffness * m_gamma;
+
+       v2 = it->first.second;
+       four_v2 = 4 * v2;
+
+       m_A->coeffRef(four_i, four_v2) = m_stiffness;
+       m_A->coeffRef(four_i + 1, four_v2 + 1) = m_stiffness;
+       m_A->coeffRef(four_i + 2, four_v2 + 2) = m_stiffness;
+       m_A->coeffRef(four_i + 3, four_v2 + 3) = m_stiffness * m_gamma;
+
+       i++;
      }
 
-
+//W*D
     for(unsigned int i = 0; i < m_templateVertCount; ++i)
     {
         auxRowIndex = i + 4 * m_templateEdgeCount;

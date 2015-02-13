@@ -26,7 +26,7 @@ private:
     unsigned int m_templateVertCount;
     unsigned int m_templateEdgeCount;
     unsigned int m_targetVertCount;
-    SparseMatrix<int>* m_M;
+    std::map < std::pair<unsigned int, unsigned int>, short >* m_adjMat;
     VectorXi* m_W;
     SparseMatrix<float>* m_D;
     MatrixXf* m_U;

@@ -9,7 +9,7 @@ Mesh::Mesh()
     m_normals = new std::vector<GLfloat>();
     m_texcoords = new std::vector<GLfloat>();
     m_faceIndices = new std::vector<GLuint>();
-    m_M = NULL;
+    m_adjMat = NULL;
     m_D = NULL;
     m_position.v[0] = 0.0;
     m_position.v[1] = 0.0;
@@ -43,9 +43,9 @@ Mesh::~Mesh()
      delete [] m_faceIndices;
  }
 
- if(m_M)
+ if(m_adjMat)
  {
-     delete m_M;
+     delete m_adjMat;
  }
 
  if(m_D)
@@ -340,17 +340,19 @@ void Mesh::buildArcNodeMatrix()
 {
   //Create the arc-node adjacency matrix
 
-    std::map <std::pair<unsigned int, unsigned int>, int > adjMap;
-    std::map <std::pair<unsigned int, unsigned int>, int >::iterator it;
-    unsigned int three_i;
-    unsigned int v1;
-    unsigned int v2;
-    unsigned int v3;
-    unsigned int min;
-    unsigned int max;
-
-    for (unsigned int i = 0; i < m_faceCount; ++i)
+    if(!m_adjMat)
     {
+     m_adjMat = new std::map<std::pair<unsigned int, unsigned int>, short >();
+     std::map <std::pair<unsigned int, unsigned int>, short >::iterator it;
+     unsigned int three_i;
+     unsigned int v1;
+     unsigned int v2;
+     unsigned int v3;
+     unsigned int min;
+     unsigned int max;
+
+     for (unsigned int i = 0; i < m_faceCount; ++i)
+     {
         three_i = 3*i;
         v1 = m_faceIndices->at(three_i);
         v2 = m_faceIndices->at(three_i + 1);
@@ -358,49 +360,34 @@ void Mesh::buildArcNodeMatrix()
 
         min = v1 < v2? v1:v2;
         max = v1 > v2? v1:v2;
-        it = adjMap.find(make_pair(min, max));
-        if(it == adjMap.end())
+        it = m_adjMat->find(make_pair(min, max));
+        if(it == m_adjMat->end())
         {
-            adjMap.insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
+            m_adjMat->insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
             m_edgeCount++;
         }
 
         min = v2 < v3? v2:v3;
         max = v2 > v3? v2:v3;
-        it = adjMap.find(make_pair(min, max));
-        if(it == adjMap.end())
+        it = m_adjMat->find(make_pair(min, max));
+        if(it == m_adjMat->end())
         {
-            adjMap.insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
+            m_adjMat->insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
             m_edgeCount++;
         }
 
         min = v1 < v3 ? v1 : v3;
         max = v1 > v3 ? v1 : v3;
-        it = adjMap.find(make_pair(min, max));
-        if(it == adjMap.end())
+        it = m_adjMat->find(make_pair(min, max));
+        if(it == m_adjMat->end())
         {
-            adjMap.insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
+            m_adjMat->insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
             m_edgeCount++;
         }
-    }
-
-    m_M = new SparseMatrix<int>(m_edgeCount, m_vertCount);
-    m_M->reserve(m_edgeCount * 2);
-    unsigned int k = 0;
-
-    for(it = adjMap.begin(); it != adjMap.end(); ++it)
-    {
-
-        v1 = it->first.first;
-        v2 = it->first.second;
-
-        m_M->coeffRef(k, v1) = -1;
-        m_M->coeffRef(k, v2) = 1;
-        k++;
-    }
-
-    m_M->makeCompressed();
+     }
+   }
 }
+
 
 void Mesh::buildVertexMatrix()
 {
