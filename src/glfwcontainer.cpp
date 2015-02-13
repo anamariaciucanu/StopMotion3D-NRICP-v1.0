@@ -209,9 +209,9 @@ void GLFWContainer::checkKeyPress()
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
      m_nrICP->calculateTransformation();
-     m_nrICP->modifyStiffness(-10.0);
+     m_mesh[0]->calculateNormals();
      m_nrICP->getTemplate()->bindVAO();
-     sleep(0.5);
+     //sleep(1);
     }
 }
 
@@ -239,10 +239,14 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     m_mesh = new Mesh*;
-    //loadMesh("../../Models/Creature.obj");
-    //loadMesh("../../Models/Cube1.obj");
-    loadMesh("../../Models/LowRes_TPose/Rob_Obj_TPose_LowRes.obj");
-    loadMesh("../../Models/LowRes_Frame2/Rob_Obj_Frame2_LowRes.obj");
+    //loadMesh("../models/Creature.obj");
+    //loadMesh("../models/Cube1.obj");
+    loadMesh("../models/Rob_Obj_TPose_LowRes.obj");
+    loadMesh("../models/Rob_Obj_Frame2_LowRes.obj");
+    //Obs! Some meshes might already have normals
+    //Because we rotate points in lodMesh function it is neccesary to recalculate the normals
+    m_mesh[0]->calculateNormals();
+    m_mesh[1]->calculateNormals();
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
@@ -292,7 +296,7 @@ void GLFWContainer::loopDrawing()
       mat4 Ry = rotate_y_deg(identity_mat4(),  m_objYRot);
       mat4 Rz = rotate_z_deg(identity_mat4(),  m_objZRot);
       m_modelMat = Rz*Ry*Rx*m_modelMat;
-      m_shader->sendModelMatrixToShader(&m_modelMat);
+
 
       //Update View matrix ==========================================================================
       if(m_camera->getMoved()){
@@ -313,7 +317,7 @@ void GLFWContainer::loopDrawing()
        glFrontFace(GL_CCW);
 
    //Draw mesh 1 ===============================template==============================================
-       m_mesh[0]->calculateNormals();
+       m_shader->sendModelMatrixToShader(&m_modelMat);
        m_shader->sendColourChoiceToShader(col1);
        glUseProgram(m_shader->getShaderProgramme());
        glBindVertexArray(m_mesh[0]->getVAO());

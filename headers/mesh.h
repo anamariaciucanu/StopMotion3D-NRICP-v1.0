@@ -67,5 +67,7 @@ public:
     float z() { return m_position.v[2]; }
     Vector3f getNormal(unsigned int _vertNo);
 
+    void rotateObject(float _angleX, float _angleY, float _angleZ);
+
 };
 #endif // MESH_H

@@ -164,6 +164,8 @@ bool Mesh::loadMesh(const char *_fileName)
      m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position.v[2];
     }
 
+    rotateObject(130.0, 90.0, 0);
+
     return true;
 }
 
@@ -392,10 +394,11 @@ void Mesh::buildArcNodeMatrix()
         v1 = it->first.first;
         v2 = it->first.second;
 
-         m_M->coeffRef(k, v1) = -1;
-         m_M->coeffRef(k, v2) = 1;
-         k++;
+        m_M->coeffRef(k, v1) = -1;
+        m_M->coeffRef(k, v2) = 1;
+        k++;
     }
+
     m_M->makeCompressed();
 }
 
@@ -453,4 +456,29 @@ Vector3f Mesh::getNormal(unsigned int _vertNo)
         normal[2] = m_normals->at(_vertNo * 3 + 2);
     }
     return normal;
+}
+
+void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
+{
+  int three_i;
+  mat4 Rx = rotate_x_deg(identity_mat4(), _angleX);
+  mat4 Ry= rotate_y_deg(identity_mat4(), _angleY);
+  mat4 Rz = rotate_z_deg(identity_mat4(), _angleZ);
+  vec4 vertex;
+  vertex.v[3] = 1.0;
+
+
+  for(unsigned int i=0; i<m_vertCount; ++i)
+  {
+     three_i = 3*i;
+     vertex.v[0] = m_vertices->at(three_i);
+     vertex.v[1] = m_vertices->at(three_i + 1);
+     vertex.v[2] = m_vertices->at(three_i + 2);
+
+     vertex = Rz * Ry * Rx * vertex;
+
+     m_vertices->at(three_i) = vertex.v[0];
+     m_vertices->at(three_i + 1) = vertex.v[1];
+     m_vertices->at(three_i + 2) = vertex.v[2];
+  }
 }

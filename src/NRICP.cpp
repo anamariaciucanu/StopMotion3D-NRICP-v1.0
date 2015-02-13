@@ -5,7 +5,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
     m_target = _target;
-    m_stiffness = 100.0;
+    m_stiffness = 200.0;
     m_epsilon = 5.0;
     m_gamma = 1.0;
     m_templateVertCount = m_template->getVertCount();
@@ -234,9 +234,9 @@ void NRICP::findCorrespondences()
       for (unsigned int i = 0; i < m_templateVertCount; ++i)
       {
           three_i = 3*i;
-          templateVertex(0) = vertsTemplate->at(three_i);
-          templateVertex(1) = vertsTemplate->at(three_i + 1);
-          templateVertex(2) = vertsTemplate->at(three_i + 2);
+          templateVertex[0] = vertsTemplate->at(three_i);
+          templateVertex[1] = vertsTemplate->at(three_i + 1);
+          templateVertex[2] = vertsTemplate->at(three_i + 2);
           SpherePartition* previous = NULL;
           SpherePartition* aux = NULL;
           SpherePartition* current = m_targetPartition;
@@ -359,23 +359,23 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
       Vector3f auxUi(0.0, 0.0, 0.0);
       unsigned int three_j;
 
-      templateVertex(0) = vertsTemplate->at(_templateIndex * 3);
-      templateVertex(1) = vertsTemplate->at(_templateIndex * 3 + 1);
-      templateVertex(2) = vertsTemplate->at(_templateIndex * 3 + 2);
+      templateVertex[0] = vertsTemplate->at(_templateIndex * 3);
+      templateVertex[1] = vertsTemplate->at(_templateIndex * 3 + 1);
+      templateVertex[2] = vertsTemplate->at(_templateIndex * 3 + 2);
 
       for(unsigned int j=_targetStart; j<=_targetEnd; ++j)
       {
        three_j = 3*j;
-       targetVertex(0) = vertsTarget->at(three_j);
-       targetVertex(1) = vertsTarget->at(three_j + 1);
-       targetVertex(2) = vertsTarget->at(three_j + 2);
+       targetVertex[0] = vertsTarget->at(three_j);
+       targetVertex[1] = vertsTarget->at(three_j + 1);
+       targetVertex[2] = vertsTarget->at(three_j + 2);
 
        distance = euclideanDistance(templateVertex, targetVertex);
        if(distance < minDistance)
         {
-         auxUi(0) = targetVertex(0);
-         auxUi(1) = targetVertex(1);
-         auxUi(2) = targetVertex(2);
+         auxUi[0] = targetVertex[0];
+         auxUi[1] = targetVertex[1];
+         auxUi[2] = targetVertex[2];
          minDistance = distance;
          targetIndex = j;
          foundCorrespondence = true;
@@ -386,24 +386,33 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
         {
           Vector3f templateNormal = m_template->getNormal(_templateIndex);
           Vector3f targetNormal = m_target->getNormal(targetIndex);
-          float normalDot = templateNormal.dot(targetNormal);
 
-          if(normalDot >= 0.0 && normalDot <= 1.0)
-          {
-           (*m_U)(_templateIndex, 0) = auxUi(0);
-           (*m_U)(_templateIndex, 1) = auxUi(1);
-           (*m_U)(_templateIndex, 2) = auxUi(2);
-          }
-          else
-          {
-           (*m_W)(_templateIndex) = 0.0;
-          }
+          //float templateNormalMagnitude = sqrt(pow(templateNormal[0],2) + pow(templateNormal[1],2) + pow(templateNormal[2],2));
+
+         // if(templateNormalMagnitude > 0.2)
+          //{
+           float normalDot = templateNormal.dot(targetNormal);
+           if(normalDot >= 0.5 && normalDot <= 1.0)
+           {
+            (*m_U)(_templateIndex, 0) = auxUi[0];
+            (*m_U)(_templateIndex, 1) = auxUi[1];
+            (*m_U)(_templateIndex, 2) = auxUi[2];
+           }
+           else
+           {
+            (*m_W)(_templateIndex) = 0.0;
+           }
+         // }
+          //else
+         // {
+         //  (*m_W)(_templateIndex) = 0.0;
+         // }
         }
         else
         {
-          (*m_W)(_templateIndex) = 0.0;
+         (*m_W)(_templateIndex) = 0.0;
         }
-  }
+ }
 
 
 void NRICP::determineOptimalDeformation()
@@ -497,9 +506,9 @@ void NRICP::deformTemplate()
 //Auxiliary
 float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
   {
-      float diff1 = _v1(0) - _v2(0);
-      float diff2 = _v1(1) - _v2(1);
-      float diff3 = _v1(2) - _v2(2);
+      float diff1 = _v1[0] - _v2[0];
+      float diff2 = _v1[1] - _v2[1];
+      float diff3 = _v1[2] - _v2[2];
 
       return sqrt(diff1*diff1 + diff2*diff2 + diff3*diff3);
   }
