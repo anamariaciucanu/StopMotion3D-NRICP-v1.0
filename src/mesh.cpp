@@ -358,8 +358,8 @@ void Mesh::buildArcNodeMatrix()
         v2 = m_faceIndices->at(three_i + 1);
         v3 = m_faceIndices->at(three_i + 2);
 
-        min = v1 < v2? v1:v2;
-        max = v1 > v2? v1:v2;
+        min = v1 < v2? v1 : v2;
+        max = v1 > v2? v1 : v2;
         it = m_adjMat->find(make_pair(min, max));
         if(it == m_adjMat->end())
         {
@@ -367,8 +367,8 @@ void Mesh::buildArcNodeMatrix()
             m_edgeCount++;
         }
 
-        min = v2 < v3? v2:v3;
-        max = v2 > v3? v2:v3;
+        min = v2 < v3? v2 : v3;
+        max = v2 > v3? v2 : v3;
         it = m_adjMat->find(make_pair(min, max));
         if(it == m_adjMat->end())
         {
@@ -391,7 +391,6 @@ void Mesh::buildArcNodeMatrix()
 
 void Mesh::buildVertexMatrix()
 {
-  //TO DO: Release memory
   if(!m_D)
   {
      m_D = new SparseMatrix<float>(m_vertCount, 4 * m_vertCount);

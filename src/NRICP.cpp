@@ -287,60 +287,8 @@ void NRICP::findCorrespondences()
             (*m_W)(i) = 0.0;
           }
       }
-
 }
 
-void NRICP::findCorrespondences_Normals(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
-  {
-    //Find closest sphere between template and target mesh
-    //Find minimal angle between normals
-
-    std::vector<GLfloat>* normalsTemplate = m_template->getNormals();
-    std::vector<GLfloat>* normalsTarget = m_target->getNormals();
-    std::vector<GLfloat>* vertsTarget = m_target->getVertices();
-
-    Vector3f templateNormal;
-    Vector3f targetNormal;
-    float angle = 0.0;
-    float maxAngle = -1.0;
-    bool foundCorrespondence = false;
-    Vector3f auxUi(0.0, 0.0, 0.0);
-
-    templateNormal(0) = normalsTemplate->at(_templateIndex * 3);
-    templateNormal(1) = normalsTemplate->at(_templateIndex * 3 + 1);
-    templateNormal(2) = normalsTemplate->at(_templateIndex * 3 + 2);
-
-
-    for(unsigned int j=_targetStart; j<=_targetEnd; ++j)
-    {
-     targetNormal(0) = normalsTarget->at(j * 3);
-     targetNormal(1) = normalsTarget->at(j * 3 + 1);
-     targetNormal(2) = normalsTarget->at(j * 3 + 2);
-
-     angle = templateNormal.dot(targetNormal);
-
-     if(angle >= 0 && angle <= 1.0 && angle > maxAngle)
-      {
-       auxUi(0) = vertsTarget->at(j * 3);
-       auxUi(1) = vertsTarget->at(j * 3 + 1);
-       auxUi(2) = vertsTarget->at(j * 3 + 2);
-       maxAngle = angle;
-       foundCorrespondence = true;
-      }
-     }
-
-      if(foundCorrespondence)
-      {
-       (*m_U)(_templateIndex, 0) = auxUi(0);
-       (*m_U)(_templateIndex, 1) = auxUi(1);
-       (*m_U)(_templateIndex, 2) = auxUi(2);
-      }
-
-      else
-      {
-        (*m_W)(_templateIndex) = 0.0;
-      }
-  }
 
 void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
   {
@@ -387,10 +335,10 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
           Vector3f templateNormal = m_template->getNormal(_templateIndex);
           Vector3f targetNormal = m_target->getNormal(targetIndex);
 
-          //float templateNormalMagnitude = sqrt(pow(templateNormal[0],2) + pow(templateNormal[1],2) + pow(templateNormal[2],2));
+          float targetNormalMagnitude = sqrt(pow(targetNormal[0],2) + pow(targetNormal[1],2) + pow(targetNormal[2],2));
 
-         // if(templateNormalMagnitude > 0.2)
-          //{
+          if(targetNormalMagnitude > 0.2)
+          {
            float normalDot = templateNormal.dot(targetNormal);
            if(normalDot >= 0.5 && normalDot <= 1.0)
            {
@@ -402,11 +350,11 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
            {
             (*m_W)(_templateIndex) = 0.0;
            }
-         // }
-          //else
-         // {
-         //  (*m_W)(_templateIndex) = 0.0;
-         // }
+          }
+          else
+          {
+           (*m_W)(_templateIndex) = 0.0;
+          }
         }
         else
         {
@@ -430,9 +378,10 @@ void NRICP::determineOptimalDeformation()
     int weight;
 
 //stiffness * M o G
+
     for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
-       four_i = 4 * i;
+       four_i = 4 * i; //for all edges
 
        v1 = it->first.first;
        four_v1 = 4 * v1;
@@ -453,7 +402,7 @@ void NRICP::determineOptimalDeformation()
        i++;
      }
 
-//W*D
+//W * D
     for(unsigned int i = 0; i < m_templateVertCount; ++i)
     {
         auxRowIndex = i + 4 * m_templateEdgeCount;
@@ -478,7 +427,7 @@ void NRICP::determineOptimalDeformation()
 
     SparseLU <SparseMatrix<GLfloat> > solver;
     solver.compute((*m_A).transpose() * (*m_A));
-    SparseMatrix<GLfloat> I(4 * m_templateVertCount,4 * m_templateVertCount);
+    SparseMatrix<GLfloat> I(4 * m_templateVertCount, 4 * m_templateVertCount);
     I.setIdentity();
     SparseMatrix<GLfloat> A_inv = solver.solve(I);
     SparseMatrix<GLfloat> result = A_inv * (*m_A).transpose() * (*m_B);
@@ -516,7 +465,7 @@ float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
       float diff2 = _v1[1] - _v2[1];
       float diff3 = _v1[2] - _v2[2];
 
-      return sqrt(diff1*diff1 + diff2*diff2 + diff3*diff3);
+      return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
   }
 
 

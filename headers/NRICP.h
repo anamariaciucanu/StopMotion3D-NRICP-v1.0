@@ -47,7 +47,6 @@ public:
     void buildVertexMatrix();
     void calculateTransformation();
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
-    void findCorrespondences_Normals(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
     void findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
     void findCorrespondences();
     void determineOptimalDeformation();

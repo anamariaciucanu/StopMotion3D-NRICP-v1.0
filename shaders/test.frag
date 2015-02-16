@@ -4,7 +4,7 @@ in vec3 position_eye, normal_eye, camera_ray_eye, col_choice_frag;
 uniform mat4 view;
 
 //Fixed point light properties
-vec3 light_position_world = vec3(0.0, 2.0, 5.0);
+vec3 light_position_world = vec3(0.0, 2.0, 2.0);
 vec3 Ls = vec3(0.2, 0.2, 0.2); // specular light colour
 vec3 Ld = vec3(1.0, 1.0, 1.0); // diffuser light colour
 vec3 La = vec3(0.3, 0.3, 0.3); // ambient light colour

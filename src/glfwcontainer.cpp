@@ -211,7 +211,7 @@ void GLFWContainer::checkKeyPress()
      m_nrICP->calculateTransformation();
      m_mesh[0]->calculateNormals();
      m_nrICP->getTemplate()->bindVAO();
-     m_nrICP->modifyStiffness(-1.0);
+    // m_nrICP->modifyStiffness(-1.0);
      //sleep(1);
     }
 }

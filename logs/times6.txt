@@ -1,14 +1,21 @@
- Finding correspondences takes 0.0056067 seconds 
-  Determining the optimal deformation takes 14.8944 seconds 
- Deforming the template takes 0.000267508 seconds 
- Calculating the normed difference takes 0.000251268 seconds 
- While loop takes 14.5912 seconds 
+ Finding correspondences takes 0.00591831 seconds 
+  Determining the optimal deformation takes 14.7741 seconds 
+ Deforming the template takes 0.000266455 seconds 
+ Calculating the normed difference takes 0.000255189 seconds 
+ While loop takes 14.4503 seconds 
 
 
- Finding correspondences takes 0.00588015 seconds 
-  Determining the optimal deformation takes 14.618 seconds 
- Deforming the template takes 0.000293015 seconds 
- Calculating the normed difference takes 0.000245259 seconds 
- While loop takes 14.7827 seconds 
+ Finding correspondences takes 0.00615826 seconds 
+  Determining the optimal deformation takes 14.3933 seconds 
+ Deforming the template takes 0.000298523 seconds 
+ Calculating the normed difference takes 0.000369246 seconds 
+ While loop takes 14.4068 seconds 
+
+
+ Finding correspondences takes 0.00594943 seconds 
+  Determining the optimal deformation takes 14.6336 seconds 
+ Deforming the template takes 0.000266498 seconds 
+ Calculating the normed difference takes 0.000240098 seconds 
+ While loop takes 14.3605 seconds 
 
 
