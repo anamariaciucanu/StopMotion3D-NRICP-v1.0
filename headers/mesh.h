@@ -21,6 +21,7 @@ class Mesh
 private:
     std::vector<GLfloat>* m_vertices; //array of vertices
     std::vector<GLfloat>* m_normals; //array of normals
+    std::vector<GLfloat>* m_vertNormalLines; //array of vertex <-> vertex + normal lines
     std::vector<GLfloat>* m_texcoords; //array of texture coordinates
     std::vector<GLuint>* m_faceIndices; //TO DO: add vt/vn index info
 
@@ -32,11 +33,13 @@ private:
     std::map <std::pair<unsigned int, unsigned int>, short >* m_adjMat;
     SparseMatrix<float>* m_D;
 
-    GLuint m_vboPosition;
-    GLuint m_vboIndices;
-    GLuint m_vboNormals;
+    GLuint m_vbo1Position;
+    GLuint m_vbo1Indices;
+    GLuint m_vbo1Normals;
+    GLuint m_vbo2Position;
     GLuint m_vboTextureCoord;
-    GLuint m_vao;
+    GLuint m_vao1;
+    GLuint m_vao2;
 
 
 public:
@@ -44,12 +47,14 @@ public:
     ~Mesh();
     bool loadMesh(const char* _fileName);
     void calculateNormals();
-    void normaliseNormals();
     void normaliseMesh();
-    void bindVAO();
+    void bindVAO1();
+    void bindVAO2();
     void buildArcNodeMatrix();
     void buildVertexMatrix();
+    void  buildVertexNormalVector();
     void changeVertsBasedOn_D_Matrix();
+    bool isIntersectingMesh(unsigned int _templateIndex, Vector3f _templateVertex, Vector3f _targetVertex);
 
     //Setters and getters
     std::vector<GLfloat>* getVertices(){return m_vertices;}
@@ -58,16 +63,22 @@ public:
     unsigned int getFaceCount() { return m_faceCount;}
     unsigned int getEdgeCount() { return m_edgeCount;}
     unsigned int getTexCoordCount() { return m_texCoordCount;}
-    GLuint getVAO() { return m_vao;}
-    void setVAO(GLuint _vao) { m_vao = _vao;}
+
+    GLuint getVAO1() { return m_vao1;}
+    void setVAO1(GLuint _vao) { m_vao1 = _vao;}
+
+    GLuint getVAO2() { return m_vao2;}
+    void setVAO2(GLuint _vao) { m_vao2 = _vao;}
+
     std::map <std::pair<unsigned int, unsigned int>, short >* getAdjMat(){ return m_adjMat;}
     SparseMatrix<float>* getD(){ return m_D;}
     float x() { return m_position.v[0]; }
     float y() { return m_position.v[1]; }
     float z() { return m_position.v[2]; }
     Vector3f getNormal(unsigned int _vertNo);
-
+    Vector3f getVertex(unsigned int _vertNo);
     void rotateObject(float _angleX, float _angleY, float _angleZ);
+    void normaliseNormals();
 
 };
 #endif // MESH_H

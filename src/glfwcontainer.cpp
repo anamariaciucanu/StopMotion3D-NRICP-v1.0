@@ -87,7 +87,7 @@ void GLFWContainer::loadMesh(const char* _fileName)
      {
          m_mesh[m_meshCount]->calculateNormals();
      }
-     m_mesh[m_meshCount]->bindVAO();
+     m_mesh[m_meshCount]->bindVAO1();
      m_meshCount++;
     }
     else
@@ -209,9 +209,9 @@ void GLFWContainer::checkKeyPress()
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
      m_nrICP->calculateTransformation();
-     m_mesh[0]->calculateNormals();
-     m_nrICP->getTemplate()->bindVAO();
-    // m_nrICP->modifyStiffness(-1.0);
+     //m_mesh[0]->calculateNormals();
+     m_nrICP->getTemplate()->bindVAO1();
+     m_nrICP->modifyStiffness(-1.0);
      //sleep(1);
     }
 }
@@ -240,14 +240,11 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     m_mesh = new Mesh*;
-    //loadMesh("../models/Creature.obj");
-    //loadMesh("../models/Cube1.obj");
     loadMesh("../models/Rob_Obj_TPose_LowRes.obj");
     loadMesh("../models/Rob_Obj_Frame2_LowRes.obj");
     //Obs! Some meshes might already have normals
     //Because we rotate points in lodMesh function it is neccesary to recalculate the normals
-    m_mesh[0]->calculateNormals();
-    m_mesh[1]->calculateNormals();
+
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
@@ -278,6 +275,8 @@ void GLFWContainer::initializeDrawing()
     m_shader->sendModelMatrixToShader(&m_modelMat);
     m_shader->sendViewMatrixToShader(&m_viewMat);
     m_shader->sendProjMatrixToShader(&m_projMat);
+
+
 }
 
 void GLFWContainer::loopDrawing()
@@ -314,24 +313,37 @@ void GLFWContainer::loopDrawing()
        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
        glViewport(0, 0, m_gl_width, m_gl_height);
        glEnable(GL_CULL_FACE);
+       glEnable(GL_PROGRAM_POINT_SIZE);
        glCullFace(GL_BACK);
        glFrontFace(GL_CCW);
 
    //Draw mesh 1 ===============================template==============================================
-       m_shader->sendModelMatrixToShader(&m_modelMat);
-       m_shader->sendColourChoiceToShader(col1);
-       glUseProgram(m_shader->getShaderProgramme());
-       glBindVertexArray(m_mesh[0]->getVAO());
-       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       //glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      m_shader->sendModelMatrixToShader(&m_modelMat);
+      m_shader->sendColourChoiceToShader(col1);
+      m_shader->sendColourPickedToShader(vec3(1.0, 0.0, 0.0));
+      m_shader->sendVertexIndexToShader(m_nrICP->getTemplateAuxIndex());
+      glUseProgram(m_shader->getShaderProgramme());
+      glBindVertexArray(m_mesh[0]->getVAO1());
+      glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      glDrawElements(GL_LINES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
    //Draw mesh 2 =================================target===============================================
-       m_shader->sendColourChoiceToShader(col2);
-       glUseProgram(m_shader->getShaderProgramme());
-       glBindVertexArray(m_mesh[1]->getVAO());
-       glPointSize(5.0);
-       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      m_shader->sendColourChoiceToShader(col2);
+      m_shader->sendColourPickedToShader(vec3(0.0, 1.0, 0.0));
+      m_shader->sendVertexIndexToShader(m_nrICP->getTargetAuxIndex());
+      glBindVertexArray(m_mesh[1]->getVAO1());
+      glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+
+    //Draw normals of template mesh ======================= template normals ===========================
+      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
+      m_mesh[0]->bindVAO2();
+      glBindVertexArray(m_mesh[0]->getVAO2());
+      glPointSize(5.0);
+      glDrawArrays(GL_LINES, 0, m_nrICP->getTemplate()->getVertCount()*6);
+      glDrawArrays(GL_POINTS, 0, m_nrICP->getTemplate()->getVertCount()*6);
+
 
        //update input handling events
        glfwPollEvents();

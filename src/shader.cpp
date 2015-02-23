@@ -100,9 +100,24 @@ void Shader::sendCameraRayToShader(vec3 _ray)
     glUniform3fv(2, 1, _ray.v); //To Do: check function
 }
 
+void Shader::sendVertexIndexToShader(int _index)
+{
+    int vertexIndex = glGetUniformLocation(m_shaderProgramme, "vert_index");
+    glUseProgram(m_shaderProgramme);
+    glUniform1i(vertexIndex, _index);
+}
+
+
 void Shader::sendColourChoiceToShader(vec3 _colour)
 {
     int colourLocation = glGetUniformLocation(m_shaderProgramme, "col_choice_vert");
+    glUseProgram(m_shaderProgramme);
+    glUniform3fv(colourLocation, 1, _colour.v);
+}
+
+void Shader::sendColourPickedToShader(vec3 _colour)
+{
+    int colourLocation = glGetUniformLocation(m_shaderProgramme, "col_picked_vert");
     glUseProgram(m_shaderProgramme);
     glUniform3fv(colourLocation, 1, _colour.v);
 }

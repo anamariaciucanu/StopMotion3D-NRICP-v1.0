@@ -1,11 +1,12 @@
 #include "mesh.h"
 #include <math.h>
 #include <boost/tokenizer.hpp>
-
+#define EPSILON 0.000001
 
 Mesh::Mesh()
 {
     m_vertices = new std::vector<GLfloat>();
+    m_vertNormalLines = new std::vector<GLfloat>();
     m_normals = new std::vector<GLfloat>();
     m_texcoords = new std::vector<GLfloat>();
     m_faceIndices = new std::vector<GLuint>();
@@ -26,6 +27,11 @@ Mesh::~Mesh()
  if(m_vertices)
  {
    delete [] m_vertices;
+ }
+
+ if(m_vertNormalLines)
+ {
+   delete [] m_vertNormalLines;
  }
 
  if(m_normals)
@@ -165,6 +171,8 @@ bool Mesh::loadMesh(const char *_fileName)
     }
 
     rotateObject(130.0, 90.0, 0);
+    calculateNormals();
+    buildVertexNormalVector();
 
     return true;
 }
@@ -208,8 +216,10 @@ void Mesh::calculateNormals()
    Vector3f point1(m_vertices->at(three_v1), m_vertices->at(three_v1 + 1), m_vertices->at(three_v1 + 2));
    Vector3f point2(m_vertices->at(three_v2), m_vertices->at(three_v2 + 1), m_vertices->at(three_v2 + 2));
    Vector3f point3(m_vertices->at(three_v3), m_vertices->at(three_v3 + 1), m_vertices->at(three_v3 + 2));
+   Vector3f edge1 = 10*(point2 - point1);
+   Vector3f edge2 = 10*(point3 - point1);
 
-   normal = (10*(point2 - point1)).cross(10*(point3 - point2));
+   normal = edge1.cross(edge2);
 
    m_normals->at(three_v1) += normal[0];
    m_normals->at(three_v1 + 1) += normal[1];
@@ -230,25 +240,56 @@ void Mesh::calculateNormals()
 void Mesh::normaliseNormals()
 {
     unsigned int three_i;
-
     for(unsigned int i = 0; i < m_vertCount; i++)
     {
-      float magnitude = 0.0;
-      three_i = 3 * i;
+        float magnitude = 0.0;
+        three_i = 3 * i;
+        float x = m_normals->at(three_i);
+        float y = m_normals->at(three_i + 1);
+        float z = m_normals->at(three_i + 2);
+        magnitude = sqrt(x * x + y * y + z * z);
 
-      float x = m_normals->at(three_i);
-      float y = m_normals->at(three_i + 1);
-      float z = m_normals->at(three_i + 2);
-      magnitude = sqrt(x * x + y * y + z * z);
-
-      if(abs(magnitude) > 1.5)
-      {
-        m_normals->at(three_i) /= magnitude;
-        m_normals->at(three_i + 1) /= magnitude;
-        m_normals->at(three_i + 2) /= magnitude;
-      }
+        if(abs(magnitude) > 1.0)
+        {
+         m_normals->at(three_i) /= magnitude;
+         m_normals->at(three_i + 1) /= magnitude;
+         m_normals->at(three_i + 2) /= magnitude;
+        }
     }
 }
+
+ void  Mesh::buildVertexNormalVector()
+ {
+     if(m_vertNormalLines->size()<1)
+     {
+         for(unsigned int k=0; k < m_vertCount * 6; ++k)
+         {
+           m_vertNormalLines->push_back(0.0);
+         }
+     }
+     else
+     {
+       for(unsigned int k=0; k<m_vertNormalLines->size(); ++k)
+       {
+         m_vertNormalLines->at(k) = 0.0;
+       }
+     }
+
+     unsigned int three_i;
+     float alpha = 1.01;
+     float beta = 0.5;
+
+     for (unsigned int i=0; i < m_vertCount; ++i)
+     {
+         three_i = 3*i;
+         m_vertNormalLines->at(three_i) = alpha * m_vertices->at(three_i);
+         m_vertNormalLines->at(three_i + 1) = alpha * m_vertices->at(three_i + 1);
+         m_vertNormalLines->at(three_i + 2) = alpha * m_vertices->at(three_i + 2);
+         m_vertNormalLines->at(three_i + 3) = m_vertices->at(three_i) + beta * m_normals->at(three_i);
+         m_vertNormalLines->at(three_i + 4) = m_vertices->at(three_i + 1) + beta * m_normals->at(three_i + 1);
+         m_vertNormalLines->at(three_i + 5) = m_vertices->at(three_i + 2) + beta * m_normals->at(three_i + 2);
+     }
+ }
 
 void Mesh::normaliseMesh()
 {
@@ -293,35 +334,43 @@ void Mesh::normaliseMesh()
     }
 }
 
-void Mesh::bindVAO()
+void Mesh::bindVAO1()
 {
-    m_vao = 0;
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    m_vao1 = 0;
+    glGenVertexArrays(1, &m_vao1);
+    glBindVertexArray(m_vao1);
 
  //Copy mesh data into VBO ======================================================================
     if(m_vertCount > 0)
     {
-        glGenBuffers(1, &m_vboPosition);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vboPosition);
+        glGenBuffers(1, &m_vbo1Position);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo1Position);
         glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount * sizeof(GLfloat), &m_vertices->at(0), GL_STATIC_DRAW);
 
-        glGenBuffers(1, &m_vboIndices);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vboIndices);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3*m_faceCount*sizeof(GLuint), &m_faceIndices->at(0), GL_STATIC_DRAW);
+        glGenBuffers(1, &m_vbo1Indices);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo1Indices);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * m_faceCount*sizeof(GLuint), &m_faceIndices->at(0), GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL); //0 corresponds to vertex positions in VAO
         glEnableVertexAttribArray(0);
     }
 
     if(m_normals->size() > 0)
-    {   glGenBuffers(1, &m_vboNormals);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vboNormals);
+    {
+        glGenBuffers(1, &m_vbo1Normals);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo1Normals);
         glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount  * sizeof(GLfloat), &m_normals->at(0), GL_STATIC_DRAW);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL); //1 corresponds to normals in VAO
         glEnableVertexAttribArray(1);
     }
 
+    if(m_vertCount > 0 && m_normals->size() > 0)
+    {
+        glGenBuffers(1, &m_vbo2Position);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo2Position);
+        glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount * sizeof(GLfloat), &m_vertices->at(0), GL_STATIC_DRAW);
+
+    }
 
 //Obs! 14 coordinates instead of 8
 /*
@@ -334,6 +383,25 @@ void Mesh::bindVAO()
         glEnableVertexAttribArray(2);
     }
 */
+}
+
+void Mesh::bindVAO2()
+{
+    unsigned int size = m_vertNormalLines->size();
+
+    m_vao2 = 0;
+    glGenVertexArrays(1, &m_vao2);
+    glBindVertexArray(m_vao2);
+
+ //Copy mesh data into VBO ======================================================================
+    if(size > 0)
+    {
+        glGenBuffers(1, &m_vbo2Position);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo2Position);
+        glBufferData(GL_ARRAY_BUFFER, size * sizeof(GLfloat), &m_vertNormalLines->at(0), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL); //0 corresponds to vertex positions in VAO
+        glEnableVertexAttribArray(0);
+    }
 }
 
 void Mesh::buildArcNodeMatrix()
@@ -435,7 +503,7 @@ Vector3f Mesh::getNormal(unsigned int _vertNo)
 {
     Vector3f normal(0.0, 0.0, 0.0);
 
-    if(m_vertCount >= _vertNo)
+    if(m_vertCount > _vertNo)
     {
         normal[0] = m_normals->at(_vertNo * 3);
         normal[1] = m_normals->at(_vertNo * 3 + 1);
@@ -443,6 +511,21 @@ Vector3f Mesh::getNormal(unsigned int _vertNo)
     }
     return normal;
 }
+
+
+Vector3f Mesh::getVertex(unsigned int _vertNo)
+{
+    Vector3f vert(0.0, 0.0, 0.0);
+
+    if(m_vertCount > _vertNo)
+    {
+     vert[0] = m_vertices->at(_vertNo * 3);
+     vert[1] = m_vertices->at(_vertNo * 3 + 1);
+     vert[2] = m_vertices->at(_vertNo * 3 + 2);
+    }
+    return vert;
+}
+
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
 {
@@ -468,3 +551,77 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
      m_vertices->at(three_i + 2) = vertex.v[2];
   }
 }
+
+
+bool Mesh::isIntersectingMesh(unsigned int _originIndex, Vector3f _origin, Vector3f _target)
+{
+    //References
+    //Fast, Minimum Storage Ray/Triangle Intersection, Möller & Trumbore. Journal of Graphics Tools, 1997.
+
+    Vector3f line = _target - _origin;
+    Vector3f direction = line/sqrt(line[0]*line[0] + line[1]*line[1] + line[2]*line[2]);
+    Vector3f point1, point2, point3;
+    Vector3f edge1, edge2;
+    Vector3f P, Q, T;
+    float det, inv_det, u, v;
+    float t;
+    unsigned int three_i;
+    unsigned int v1, v2, v3;
+
+    for(unsigned int i=0; i<m_faceCount; ++i)
+    {
+        three_i = 3*i;
+        v1 = m_faceIndices->at(three_i);
+        v2 = m_faceIndices->at(three_i + 1);
+        v3 = m_faceIndices->at(three_i + 2);
+
+        if(v1 != _originIndex && v2 != _originIndex && v3 != _originIndex)
+        {
+            point1 = getVertex(v1);
+            point2 = getVertex(v2);
+            point3 = getVertex(v3);
+
+          //Find vectors for two edges sharing V1
+            edge1 = point2 - point1;
+            edge2 = point3 - point1;
+
+          //Begin calculating determinant - also used to calculate u parameter
+          P = direction.cross(edge2);
+
+         //if determinant is near zero, ray lies in plane of triangle
+         det = edge1.dot(P);
+
+         //NOT CULLING
+         if(det > -EPSILON && det < EPSILON) return false;
+         inv_det = 1.f / det;
+
+         //calculate distance from point1 to ray origin
+         T = point1 - _origin;
+
+         //Calculate u parameter and test bound
+         u = T.dot(P) * inv_det;
+
+         //The intersection lies outside of the triangle
+         if(u < 0.f || u > 1.f) return false;
+
+         //Prepare to test v parameter
+          Q = T.cross(edge1);
+
+         //Calculate V parameter and test bound
+         v = direction.dot(Q) * inv_det;
+
+        //The intersection lies outside of the triangle
+        if(v < 0.f || u + v  > 1.f) return false;
+
+        t = edge2.dot(Q) * inv_det;
+
+        if(t > EPSILON)
+        { //ray intersection
+          return true;
+        }
+      }
+    }
+
+    return false;
+}
+

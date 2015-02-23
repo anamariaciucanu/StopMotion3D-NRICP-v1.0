@@ -37,6 +37,8 @@ private:
 
     //Aux
     ofstream myfile;
+    unsigned int m_targetAuxIndex;
+    unsigned int m_templateAuxIndex;
 
 public:
     NRICP(Mesh* _template,  Mesh* _target);
@@ -60,12 +62,12 @@ public:
       }
     }
 
-    float getStiffness() { return m_stiffness;}
-
     //Auxiliary
+    float getStiffness() { return m_stiffness;}
     float euclideanDistance(Vector3f _v1, Vector3f _v2);
     Mesh* getTemplate(){ return m_template; }
     Mesh* getTarget() { return m_target; }
-
+    int getTargetAuxIndex(){ return m_targetAuxIndex; }
+    int getTemplateAuxIndex(){ return m_templateAuxIndex; }
 };
 #endif // NRICP_H

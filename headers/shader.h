@@ -23,6 +23,8 @@ public:
     void sendProjMatrixToShader(mat4 *_projMatrix);
     void sendCameraRayToShader(vec3 _ray);
     void sendColourChoiceToShader(vec3 _colour);
+    void sendColourPickedToShader(vec3 _colour);
+    void sendVertexIndexToShader(int _index);
 
     GLuint getShaderProgramme() { return m_shaderProgramme; }
 };
