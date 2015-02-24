@@ -42,15 +42,15 @@ void calculateClickRay(double _mouseX, double _mouseY)
     //Local Coordinates
     vec4 ray_loc = inverse(glfw_container->getModelMatrix())*ray_wor;
 
-    vec3 ray3 = vec3(ray_loc.v[0], ray_loc.v[1], ray_loc.v[2]);
-    normalise(ray3);
-    vec4 camera(cam->x(), cam->y(), cam->z(), 1);
-    vec4 camera_loc = inverse(glfw_container->getModelMatrix())*camera;
+    vec3 ray_aux = vec3(ray_loc.v[0], ray_loc.v[1], ray_loc.v[2]);
+    normalise(ray_aux);
+    vec4 cam_wor(cam->x(), cam->y(), cam->z(), 1);
+    vec4 cam_loc = inverse(glfw_container->getModelMatrix())*cam_wor;
 
-    Vector3f _cam = Vector3f(camera_loc.v[0], camera_loc.v[1], camera_loc.v[2]);
-    Vector3f _ray = Vector3f(ray3.v[0], ray3.v[1], ray3.v[2]);
+    Vector3f camera = Vector3f(cam_loc.v[0], cam_loc.v[1], cam_loc.v[2]);
+    Vector3f ray = Vector3f(ray_aux.v[0], ray_aux.v[1], ray_aux.v[2]);
 
-    int intersection = nrICP->getTemplate()->whereIsIntersectingMesh(true, -1, _cam, _ray);
+    int intersection = nrICP->getTemplate()->whereIsIntersectingMesh(true, -1, camera, ray);
 
     if(intersection >= 0)
     {
