@@ -23,6 +23,9 @@ GLFWContainer* glfw_container = new GLFWContainer(1280, 720);
 
 void calculateClickRay(double _mouseX, double _mouseY)
 {
+    Camera* cam = glfw_container->getCamera();
+    NRICP* nrICP = glfw_container->getNRICP();
+
     //2D Viewport Coordinates -> 3D Normalised Device Coordinates
     float x = (2.0f * _mouseX)/glfw_container->getWidth() - 1.0f;
     float y = 1.0f - (2.0f * _mouseY)/glfw_container->getHeight();
@@ -35,16 +38,19 @@ void calculateClickRay(double _mouseX, double _mouseY)
     vec4 ray_eye = inverse(glfw_container->getProjMatrix())*ray_clip;
     ray_eye = vec4(ray_eye.v[0], ray_eye.v[1], -1.0, 0.0);
     //4D World Coordinates
-    vec4 aux_wor= inverse(glfw_container->getViewMatrix())*ray_eye;
-    vec3 ray_wor = vec3(aux_wor.v[0], aux_wor.v[1], aux_wor.v[2]);
-    ray_wor = normalise(ray_wor);
-    Camera* cam = glfw_container->getCamera();
-    NRICP* nrICP = glfw_container->getNRICP();
-    Vector3f camera(cam->x(), cam->y(), cam->z());
-    Vector3f ray = Vector3f(ray_wor.v[0], ray_wor.v[1], ray_wor.v[2]);
-    ray = ray/sqrt(ray[0]*ray[0] + ray[1]*ray[1] + ray[2]*ray[2]);
+    vec4 ray_wor = inverse(glfw_container->getViewMatrix())*ray_eye;
+    //Local Coordinates
+    vec4 ray_loc = inverse(glfw_container->getModelMatrix())*ray_wor;
 
-    int intersection = nrICP->getTemplate()->whereIsIntersectingMesh(true, -1, camera, ray);
+    vec3 ray3 = vec3(ray_loc.v[0], ray_loc.v[1], ray_loc.v[2]);
+    normalise(ray3);
+    vec4 camera(cam->x(), cam->y(), cam->z(), 1);
+    vec4 camera_loc = inverse(glfw_container->getModelMatrix())*camera;
+
+    Vector3f _cam = Vector3f(camera_loc.v[0], camera_loc.v[1], camera_loc.v[2]);
+    Vector3f _ray = Vector3f(ray3.v[0], ray3.v[1], ray3.v[2]);
+
+    int intersection = nrICP->getTemplate()->whereIsIntersectingMesh(true, -1, _cam, _ray);
 
     if(intersection >= 0)
     {

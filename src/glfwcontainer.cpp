@@ -287,7 +287,6 @@ void GLFWContainer::loopDrawing()
 {
     m_camera->setMoved(false);
     vec3 col1 = vec3(0.9, 0.6, 0.3);
-    vec3 col2 = vec3(0.3, 0.6, 0.9);
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -322,6 +321,7 @@ void GLFWContainer::loopDrawing()
        glFrontFace(GL_CCW);
 
    //Draw mesh 1 ===============================template==============================================
+      m_modelMat.m[12] = -0.7;
       m_shader->sendModelMatrixToShader(&m_modelMat);
       m_shader->sendColourChoiceToShader(col1);
       m_shader->sendColourPickedToShader(vec3(1.0, 0.0, 0.0));
@@ -330,15 +330,16 @@ void GLFWContainer::loopDrawing()
       glBindVertexArray(m_mesh[0]->getVAO1());
       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      glDrawElements(GL_LINES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
    //Draw mesh 2 =================================target===============================================
-      m_shader->sendColourChoiceToShader(col2);
-      m_shader->sendColourPickedToShader(vec3(0.0, 1.0, 0.0));
-      m_shader->sendVertexIndexToShader(m_nrICP->getTargetAuxIndex());
-      glBindVertexArray(m_mesh[1]->getVAO1());
-      glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+//      m_modelMat.m[12] = 0.7;
+//      m_shader->sendModelMatrixToShader(&m_modelMat);
+//      m_shader->sendColourChoiceToShader(col2);
+//      m_shader->sendColourPickedToShader(vec3(0.0, 1.0, 0.0));
+//      m_shader->sendVertexIndexToShader(m_nrICP->getTargetAuxIndex());
+//      glBindVertexArray(m_mesh[1]->getVAO1());
+//      glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+//      glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
     //Draw normals of template mesh ======================= template normals ===========================
 //      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));

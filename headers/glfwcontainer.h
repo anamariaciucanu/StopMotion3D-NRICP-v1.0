@@ -51,10 +51,12 @@ public:
     void setHeight(int _height){ m_gl_height = _height; }
     int getHeight(){ return m_gl_height; }
     Logger* getLogger(){ return m_logger; }
+    mat4 getModelMatrix() { return m_modelMat; }
     mat4 getProjMatrix(){ return m_projMat; }
     mat4 getViewMatrix(){ return m_viewMat; }
     Camera* getCamera(){ return m_camera; }
     NRICP* getNRICP(){ return m_nrICP; }
+    Shader* getShader() { return m_shader; }
 };
 
 #endif // MYGLFWWINDOW_H
