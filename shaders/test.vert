@@ -17,7 +17,14 @@ void main()
   position_eye = vec3(view * model * vec4(vertex_position, 1.0));
   normal_eye = vec3(view * model * vec4(vertex_normal, 0.0));
   gl_Position = proj * view * model * vec4(vertex_position, 1.0);
- // camera_ray_eye = camera_ray;
+
+  //intersection
+  float dot_prod_intersection = dot(camera_ray_eye, normal_eye);
+  dot_prod_intersection = max(dot_prod_intersection, 0.0);
+  if (dot_prod_intersection > 0.0)
+  {
+   col_choice_frag = col_picked_vert;
+  }
 
   if(gl_VertexID == vert_index)
   {

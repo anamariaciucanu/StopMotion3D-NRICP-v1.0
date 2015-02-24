@@ -6,7 +6,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_stiffness = 200.0;
-    m_epsilon = 1.0;
+    m_epsilon = 5.0;
     m_gamma = 1.0;
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
@@ -128,7 +128,6 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
     return _partition;
 }
 
-
 void NRICP::destroyPartitions(SpherePartition* _partition)
 {
     if(_partition)
@@ -149,7 +148,6 @@ void NRICP::destroyPartitions(SpherePartition* _partition)
         }
     }
 }
-
 
 void NRICP::calculateTransformation()
 {
@@ -264,7 +262,6 @@ void NRICP::findCorrespondences()
       }
 }
 
-
 void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
   {
       //Find closest points between template and target mesh
@@ -308,7 +305,10 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
 
         if(foundCorrespondence)
         {
-          if(!m_template->isIntersectingMesh(_templateIndex, templateVertex, auxUi))
+          Vector3f ray = auxUi - templateVertex;
+          ray = ray/sqrt(ray[0]*ray[0] + ray[1]*ray[1] + ray[2]*ray[2]);
+
+          if(m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray) < 0) //No intersection - GooD!
           {
            Vector3f templateNormal = m_template->getNormal(_templateIndex);
            Vector3f targetNormal = m_target->getNormal(targetIndex);
@@ -345,7 +345,6 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
         (*m_W)(_templateIndex) = 0.0;
        }
  }
-
 
 void NRICP::determineOptimalDeformation()
   {
@@ -418,7 +417,6 @@ void NRICP::determineOptimalDeformation()
     (*m_X) = result;
 }
 
-
 void NRICP::deformTemplate()
   {
       unsigned int four_i;
@@ -439,7 +437,6 @@ void NRICP::deformTemplate()
       m_template->changeVertsBasedOn_D_Matrix();
       m_D->makeCompressed();
   }
-
 
 //Auxiliary
 float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)

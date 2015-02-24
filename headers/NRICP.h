@@ -69,5 +69,7 @@ public:
     Mesh* getTarget() { return m_target; }
     int getTargetAuxIndex(){ return m_targetAuxIndex; }
     int getTemplateAuxIndex(){ return m_templateAuxIndex; }
+    void setTargetAuxIndex(int _value){ m_targetAuxIndex = _value; }
+    void setTemplateAuxIndex(int _value){ m_templateAuxIndex = _value; }
 };
 #endif // NRICP_H

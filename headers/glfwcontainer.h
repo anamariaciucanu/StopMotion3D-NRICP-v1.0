@@ -53,6 +53,8 @@ public:
     Logger* getLogger(){ return m_logger; }
     mat4 getProjMatrix(){ return m_projMat; }
     mat4 getViewMatrix(){ return m_viewMat; }
+    Camera* getCamera(){ return m_camera; }
+    NRICP* getNRICP(){ return m_nrICP; }
 };
 
 #endif // MYGLFWWINDOW_H

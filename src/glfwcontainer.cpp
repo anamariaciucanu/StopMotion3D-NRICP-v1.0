@@ -216,6 +216,7 @@ void GLFWContainer::checkKeyPress()
     }
 }
 
+
 void GLFWContainer::checkMeshIntersection(vec3 _ray)
 {
   m_shader->sendCameraRayToShader(_ray);
@@ -242,6 +243,9 @@ void GLFWContainer::initializeDrawing()
     m_mesh = new Mesh*;
     loadMesh("../models/Rob_Obj_TPose_LowRes.obj");
     loadMesh("../models/Rob_Obj_Frame2_LowRes.obj");
+   // loadMesh("../models/Cube1.obj");
+   // loadMesh("../models/Cube2.obj");
+
     //Obs! Some meshes might already have normals
     //Because we rotate points in lodMesh function it is neccesary to recalculate the normals
 
@@ -337,12 +341,12 @@ void GLFWContainer::loopDrawing()
       glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
     //Draw normals of template mesh ======================= template normals ===========================
-      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
-      m_mesh[0]->bindVAO2();
-      glBindVertexArray(m_mesh[0]->getVAO2());
-      glPointSize(5.0);
-      glDrawArrays(GL_LINES, 0, m_nrICP->getTemplate()->getVertCount()*6);
-      glDrawArrays(GL_POINTS, 0, m_nrICP->getTemplate()->getVertCount()*6);
+//      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
+//      m_mesh[0]->bindVAO2();
+//      glBindVertexArray(m_mesh[0]->getVAO2());
+//      glPointSize(5.0);
+//      glDrawArrays(GL_LINES, 0, m_nrICP->getTemplate()->getVertCount()*6);
+//      glDrawArrays(GL_POINTS, 0, m_nrICP->getTemplate()->getVertCount()*6);
 
 
        //update input handling events

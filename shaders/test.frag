@@ -1,6 +1,6 @@
 #version 400
 
-in vec3 position_eye, normal_eye, camera_ray_eye, col_choice_frag;
+in vec3 position_eye, normal_eye, col_choice_frag;
 uniform mat4 view;
 
 //Fixed point light properties
@@ -42,14 +42,6 @@ void main()
   dot_prod_specular = max(dot_prod_specular, 0.0);
   float specular_factor = pow(dot_prod_specular, specular_exponent);
   
-  //intersection
-  float dot_prod_intersection = dot(camera_ray_eye, normal_eye);
-  dot_prod_intersection = max(dot_prod_intersection, 0.0);
-  if (dot_prod_intersection < 0.5)
-  {
-      Ks = Kpicked;
-  }
-
   //ambient intensity
   vec3 Ia = La * Ka;
 

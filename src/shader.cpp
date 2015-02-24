@@ -97,7 +97,7 @@ void Shader::sendProjMatrixToShader(mat4* _projMatrix)
 void Shader::sendCameraRayToShader(vec3 _ray)
 {
     glUseProgram(m_shaderProgramme);
-    glUniform3fv(2, 1, _ray.v); //To Do: check function
+    glUniform3fv(2, 1, _ray.v);
 }
 
 void Shader::sendVertexIndexToShader(int _index)

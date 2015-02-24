@@ -54,7 +54,7 @@ public:
     void buildVertexMatrix();
     void  buildVertexNormalVector();
     void changeVertsBasedOn_D_Matrix();
-    bool isIntersectingMesh(unsigned int _templateIndex, Vector3f _templateVertex, Vector3f _targetVertex);
+    int whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vector3f _origin, Vector3f _ray);
 
     //Setters and getters
     std::vector<GLfloat>* getVertices(){return m_vertices;}
@@ -79,6 +79,7 @@ public:
     Vector3f getVertex(unsigned int _vertNo);
     void rotateObject(float _angleX, float _angleY, float _angleZ);
     void normaliseNormals();
+    float euclideanDistance(Vector3f _v1, Vector3f _v2);
 
 };
 #endif // MESH_H

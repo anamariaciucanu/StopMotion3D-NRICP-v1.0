@@ -172,7 +172,7 @@ bool Mesh::loadMesh(const char *_fileName)
 
     rotateObject(130.0, 90.0, 0);
     calculateNormals();
-    buildVertexNormalVector();
+   // buildVertexNormalVector();
 
     return true;
 }
@@ -552,76 +552,147 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
   }
 }
 
-
-bool Mesh::isIntersectingMesh(unsigned int _originIndex, Vector3f _origin, Vector3f _target)
+int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vector3f _origin, Vector3f _ray)
 {
     //References
     //Fast, Minimum Storage Ray/Triangle Intersection, Möller & Trumbore. Journal of Graphics Tools, 1997.
 
-    Vector3f line = _target - _origin;
-    Vector3f direction = line/sqrt(line[0]*line[0] + line[1]*line[1] + line[2]*line[2]);
     Vector3f point1, point2, point3;
     Vector3f edge1, edge2;
     Vector3f P, Q, T;
     float det, inv_det, u, v;
-    float t;
+    float t = 0.0f;
+    unsigned int i = 0;
     unsigned int three_i;
-    unsigned int v1, v2, v3;
+    int v1, v2, v3;
 
-    for(unsigned int i=0; i<m_faceCount; ++i)
+
+    while(i < m_faceCount)
     {
-        three_i = 3*i;
-        v1 = m_faceIndices->at(three_i);
-        v2 = m_faceIndices->at(three_i + 1);
-        v3 = m_faceIndices->at(three_i + 2);
+      three_i = 3*i;
+      i++;
+      v1 = m_faceIndices->at(three_i);
+      v2 = m_faceIndices->at(three_i+ 1);
+      v3 = m_faceIndices->at(three_i + 2);
 
-        if(v1 != _originIndex && v2 != _originIndex && v3 != _originIndex)
-        {
-            point1 = getVertex(v1);
-            point2 = getVertex(v2);
-            point3 = getVertex(v3);
+      if(v1 != _originTemplateIndex && v2 != _originTemplateIndex && v3 != _originTemplateIndex)
+      {
+        point1 = getVertex(v1);
+        point2 = getVertex(v2);
+        point3 = getVertex(v3);
 
-          //Find vectors for two edges sharing V1
-            edge1 = point2 - point1;
-            edge2 = point3 - point1;
+        //Find vectors for two edges sharing V1
+        edge1 = point2 - point1;
+        edge2 = point3 - point1;
 
-          //Begin calculating determinant - also used to calculate u parameter
-          P = direction.cross(edge2);
+        //Begin calculating determinant - also used to calculate u parameter
+         P = _ray.cross(edge2);
 
-         //if determinant is near zero, ray lies in plane of triangle
+        //if determinant is near zero, ray lies in plane of triangle
          det = edge1.dot(P);
 
-         //NOT CULLING
-         if(det > -EPSILON && det < EPSILON) return false;
-         inv_det = 1.f / det;
 
-         //calculate distance from point1 to ray origin
-         T = point1 - _origin;
+         if(_culling)
+         {
+           //Define test_cull if culling is desired
+           if(det < EPSILON) continue;
 
-         //Calculate u parameter and test bound
-         u = T.dot(P) * inv_det;
+           //calculate distance from origin to point1
+           T = _origin - point1;
 
-         //The intersection lies outside of the triangle
-         if(u < 0.f || u > 1.f) return false;
+           //Calculate u parameter and test bound
+           u = T.dot(P);
 
-         //Prepare to test v parameter
-          Q = T.cross(edge1);
+           //The intersection lies outside of the triangle
+           if(u < 0.f || u > det) continue;
 
-         //Calculate V parameter and test bound
-         v = direction.dot(Q) * inv_det;
+           //Prepare to test v parameter
+           Q = T.cross(edge1);
 
-        //The intersection lies outside of the triangle
-        if(v < 0.f || u + v  > 1.f) return false;
+           //Calculate V parameter and test bound
+           v = _ray.dot(Q);
 
-        t = edge2.dot(Q) * inv_det;
+           //The intersection lies outside of the triangle
+           if(v < 0.f || u + v  > det) continue;
+
+           t = edge2.dot(Q);
+           inv_det = 1.0f/det;
+
+           //Scale parameters
+           t *= inv_det;
+           u *= inv_det;
+           v *= inv_det;
+         }
+
+         else //Non-culling
+         {
+            if(det > -EPSILON && det < EPSILON) continue;
+            inv_det = 1.0f/det;
+
+            //calculate distance from origin to point1
+            T = _origin - point1;
+
+            //Calculate u parameter and test bound
+            u = T.dot(P) * inv_det;
+
+            //The intersection lies outside of the triangle
+            if(u < 0.f || u > 1.0f) continue;
+
+            //Prepare to test v parameter
+            Q = T.cross(edge1);
+
+            //Calculate V parameter and test bound
+            v = _ray.dot(Q) * inv_det;
+
+            //The intersection lies outside of the triangle
+            if(v < 0.f || u + v  > 1.0f) continue;
+
+            t = edge2.dot(Q) * inv_det;
+         }
 
         if(t > EPSILON)
         { //ray intersection
-          return true;
+           //Find intersection point
+            Vector3f intersection = _origin + t * _ray;
+            float max = -100;
+            int imax;
+
+            float distance1 = euclideanDistance(intersection, point1);
+            float distance2 = euclideanDistance(intersection, point2);
+            float distance3 = euclideanDistance(intersection, point3);
+
+            if(distance1 > max)
+            {
+              max = distance1;
+              imax = v1;
+            }
+
+            if (distance2 > max)
+            {
+                max = distance2;
+                imax = v2;
+            }
+
+            if(distance3 > max)
+            {
+               max = distance3;
+               imax = v3;
+            }
+
+            return imax;          
         }
       }
     }
 
-    return false;
+ return -1;
 }
 
+
+float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
+  {
+      float diff1 = _v1[0] - _v2[0];
+      float diff2 = _v1[1] - _v2[1];
+      float diff3 = _v1[2] - _v2[2];
+
+      return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+  }
