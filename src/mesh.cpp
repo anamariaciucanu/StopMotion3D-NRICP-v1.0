@@ -19,6 +19,7 @@ Mesh::Mesh()
     m_edgeCount = 0;
     m_faceCount = 0;
     m_texCoordCount = 0;
+    m_pickedVertexIndex = -1;
 }
 
 
@@ -60,7 +61,7 @@ Mesh::~Mesh()
  }
 }
 
-bool Mesh::loadMesh(const char *_fileName)
+bool Mesh::loadMesh(const char *_fileName, float* _transformations)
 {    
     ifstream in(_fileName, ios::in);
     if (!in)
@@ -170,9 +171,10 @@ bool Mesh::loadMesh(const char *_fileName)
      m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position.v[2];
     }
 
-    rotateObject(130.0, 90.0, 0);
+    rotateObject(_transformations[0], _transformations[1], _transformations[2]);
+    moveObject(_transformations[3], _transformations[4], _transformations[5]);
     calculateNormals();
-   // buildVertexNormalVector();
+    // buildVertexNormalVector();
 
     return true;
 }
@@ -545,6 +547,29 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
      vertex.v[2] = m_vertices->at(three_i + 2);
 
      vertex = Rz * Ry * Rx * vertex;
+
+     m_vertices->at(three_i) = vertex.v[0];
+     m_vertices->at(three_i + 1) = vertex.v[1];
+     m_vertices->at(three_i + 2) = vertex.v[2];
+  }
+}
+
+void Mesh::moveObject(float _tX, float _tY, float _tZ)
+{
+  int three_i;
+  mat4 T = translate(identity_mat4(), vec3(_tX, _tY, _tZ));
+  vec4 vertex;
+  vertex.v[3] = 1.0;
+
+
+  for(unsigned int i=0; i<m_vertCount; ++i)
+  {
+     three_i = 3*i;
+     vertex.v[0] = m_vertices->at(three_i);
+     vertex.v[1] = m_vertices->at(three_i + 1);
+     vertex.v[2] = m_vertices->at(three_i + 2);
+
+     vertex = T * vertex;
 
      m_vertices->at(three_i) = vertex.v[0];
      m_vertices->at(three_i + 1) = vertex.v[1];

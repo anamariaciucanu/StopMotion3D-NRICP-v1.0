@@ -24,7 +24,6 @@ GLFWContainer* glfw_container = new GLFWContainer(1280, 720);
 void calculateClickRay(double _mouseX, double _mouseY)
 {
     Camera* cam = glfw_container->getCamera();
-    NRICP* nrICP = glfw_container->getNRICP();
 
     //2D Viewport Coordinates -> 3D Normalised Device Coordinates
     float x = (2.0f * _mouseX)/glfw_container->getWidth() - 1.0f;
@@ -50,11 +49,12 @@ void calculateClickRay(double _mouseX, double _mouseY)
     Vector3f camera = Vector3f(cam_loc.v[0], cam_loc.v[1], cam_loc.v[2]);
     Vector3f ray = Vector3f(ray_aux.v[0], ray_aux.v[1], ray_aux.v[2]);
 
-    int intersection = nrICP->getTemplate()->whereIsIntersectingMesh(true, -1, camera, ray);
+    Mesh* activeMesh =  glfw_container->getClickActiveMesh();
+    int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
 
     if(intersection >= 0)
     {
-        nrICP->setTemplateAuxIndex(intersection);
+      activeMesh->setPickedVertexIndex(intersection);
     }
 }
 

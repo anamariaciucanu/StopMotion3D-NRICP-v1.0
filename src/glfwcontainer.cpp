@@ -13,6 +13,8 @@ GLFWContainer::GLFWContainer(int _width, int _height)
     m_objXRot = 0.0;
     m_objYRot = 0.0;
     m_objZRot = 0.0;
+    m_mesh = new Mesh*;
+    m_clickActiveMeshIndex = 0;
 }
 
 GLFWContainer::~GLFWContainer()
@@ -78,10 +80,10 @@ bool GLFWContainer::initializeWindow()
  return true;
 }
 
-void GLFWContainer::loadMesh(const char* _fileName)
+void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
 {
     m_mesh[m_meshCount] = new Mesh();
-    if(m_mesh[m_meshCount]->loadMesh(_fileName))
+    if(m_mesh[m_meshCount]->loadMesh(_fileName, _transformations))
     {
      if(m_mesh[m_meshCount]->getNormals()->size()<1)
      {
@@ -162,16 +164,6 @@ void GLFWContainer::checkKeyPress()
       m_camera->setMoved(true);
     }
 
-    else if(glfwGetKey(m_window, GLFW_KEY_PAGE_UP)){
-      m_camera->translate(1, m_camera->getSpeed() * elapsed_seconds);
-      m_camera->setMoved(true);
-    }
-
-    else if(glfwGetKey(m_window, GLFW_KEY_PAGE_DOWN)){
-      m_camera->translate(1, -m_camera->getSpeed() * elapsed_seconds);
-      m_camera->setMoved(true);
-    }
-
     else if(glfwGetKey(m_window, GLFW_KEY_W)){
       m_camera->translate(2, -m_camera->getSpeed() * elapsed_seconds);
       m_camera->setMoved(true);
@@ -204,6 +196,28 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_B)){
      m_objZRot -= 0.05;
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_0)){
+     getClickActiveMesh()->setPickedVertexIndex(-1);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_1)){
+     setClickActiveMeshIndex(0);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_2)){
+     setClickActiveMeshIndex(1);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_L)){
+     m_nrICP->addLandmarkCorrespondence();
+     m_nrICP->setLandmarkCorrespChanged(true);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_K)){
+     m_nrICP->clearLandmarkCorrespondences();
+     m_nrICP->setLandmarkCorrespChanged(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_T))
@@ -240,15 +254,15 @@ void GLFWContainer::initializeDrawing()
 
 
     //Load a scene ============================================================================
-    m_mesh = new Mesh*;
-    loadMesh("../models/Rob_Obj_TPose_LowRes.obj");
-    loadMesh("../models/Rob_Obj_Frame2_LowRes.obj");
+    float transformations[6] = {130.0, 90.0, 0, -0.7, 0.0, 0.0};
+    loadMesh("../models/Rob_Obj_TPose_LowRes.obj", transformations);
+    transformations[3] = 0.7;
+    loadMesh("../models/Rob_Obj_Frame2_LowRes.obj", transformations);
    // loadMesh("../models/Cube1.obj");
    // loadMesh("../models/Cube2.obj");
 
     //Obs! Some meshes might already have normals
     //Because we rotate points in lodMesh function it is neccesary to recalculate the normals
-
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
@@ -279,14 +293,13 @@ void GLFWContainer::initializeDrawing()
     m_shader->sendModelMatrixToShader(&m_modelMat);
     m_shader->sendViewMatrixToShader(&m_viewMat);
     m_shader->sendProjMatrixToShader(&m_projMat);
-
-
 }
 
 void GLFWContainer::loopDrawing()
 {
     m_camera->setMoved(false);
     vec3 col1 = vec3(0.9, 0.6, 0.3);
+    vec3 col2 = vec3(0.3, 0.6, 0.9);
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -320,26 +333,26 @@ void GLFWContainer::loopDrawing()
        glCullFace(GL_BACK);
        glFrontFace(GL_CCW);
 
+       m_shader->sendModelMatrixToShader(&m_modelMat);
+       m_shader->sendColourPickedToShader(vec3(1.0, 0.0, 0.0));
+
    //Draw mesh 1 ===============================template==============================================
-      m_modelMat.m[12] = -0.7;
-      m_shader->sendModelMatrixToShader(&m_modelMat);
       m_shader->sendColourChoiceToShader(col1);
-      m_shader->sendColourPickedToShader(vec3(1.0, 0.0, 0.0));
-      m_shader->sendVertexIndexToShader(m_nrICP->getTemplateAuxIndex());
+      //m_shader->sendVertexIndexToShader(m_nrICP->getTemplateAuxIndex());
+      m_shader->sendVertexIndexToShader(m_mesh[0]->getPickedVertexIndex());
       glUseProgram(m_shader->getShaderProgramme());
       glBindVertexArray(m_mesh[0]->getVAO1());
       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
    //Draw mesh 2 =================================target===============================================
-//      m_modelMat.m[12] = 0.7;
-//      m_shader->sendModelMatrixToShader(&m_modelMat);
-//      m_shader->sendColourChoiceToShader(col2);
-//      m_shader->sendColourPickedToShader(vec3(0.0, 1.0, 0.0));
-//      m_shader->sendVertexIndexToShader(m_nrICP->getTargetAuxIndex());
-//      glBindVertexArray(m_mesh[1]->getVAO1());
-//      glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-//      glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      m_shader->sendColourChoiceToShader(col2);
+      //m_shader->sendVertexIndexToShader(m_nrICP->getTargetAuxIndex());
+      m_shader->sendVertexIndexToShader(m_mesh[1]->getPickedVertexIndex());
+      glBindVertexArray(m_mesh[1]->getVAO1());
+      glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      //glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
     //Draw normals of template mesh ======================= template normals ===========================
 //      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));

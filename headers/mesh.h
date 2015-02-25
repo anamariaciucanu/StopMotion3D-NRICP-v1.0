@@ -41,11 +41,15 @@ private:
     GLuint m_vao1;
     GLuint m_vao2;
 
+    //Aux
+    unsigned int m_pickedVertexIndex;
+
+
 
 public:
     Mesh();
     ~Mesh();
-    bool loadMesh(const char* _fileName);
+    bool loadMesh(const char* _fileName, float *_transformations);
     void calculateNormals();
     void normaliseMesh();
     void bindVAO1();
@@ -78,8 +82,13 @@ public:
     Vector3f getNormal(unsigned int _vertNo);
     Vector3f getVertex(unsigned int _vertNo);
     void rotateObject(float _angleX, float _angleY, float _angleZ);
+    void moveObject(float _tX, float _tY, float _tZ);
     void normaliseNormals();
     float euclideanDistance(Vector3f _v1, Vector3f _v2);
+
+    //Aux
+    int getPickedVertexIndex(){ return m_pickedVertexIndex; }
+    void setPickedVertexIndex(int _index) { m_pickedVertexIndex = _index; }
 
 };
 #endif // MESH_H

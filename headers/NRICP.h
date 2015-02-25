@@ -21,12 +21,15 @@ private:
     Mesh* m_template;
     Mesh* m_target;
     float m_stiffness;
+    float m_beta; //for landmark influence
     float m_epsilon;
     float m_gamma;
     unsigned int m_templateVertCount;
     unsigned int m_templateEdgeCount;
     unsigned int m_targetVertCount;
     std::map < std::pair<unsigned int, unsigned int>, short >* m_adjMat;
+    std::vector<std::pair<unsigned int, unsigned int> >* m_landmarkCorrespondences;    //Landmarks - TO DO: Don't allow same landmark points twice
+    bool m_landmarkCorrespChanged;
     VectorXi* m_W;
     SparseMatrix<float>* m_D;
     MatrixXf* m_U;
@@ -39,6 +42,7 @@ private:
     ofstream myfile;
     unsigned int m_targetAuxIndex;
     unsigned int m_templateAuxIndex;
+
 
 public:
     NRICP(Mesh* _template,  Mesh* _target);
@@ -61,6 +65,10 @@ public:
           m_stiffness = 1.0;
       }
     }
+    void addLandmarkCorrespondence();
+    void clearLandmarkCorrespondences() { m_landmarkCorrespondences->clear(); }
+
+//TO DO: Separate A elements and have add functions for them
 
     //Auxiliary
     float getStiffness() { return m_stiffness;}
@@ -71,5 +79,6 @@ public:
     int getTemplateAuxIndex(){ return m_templateAuxIndex; }
     void setTargetAuxIndex(int _value){ m_targetAuxIndex = _value; }
     void setTemplateAuxIndex(int _value){ m_templateAuxIndex = _value; }
+    void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
 };
 #endif // NRICP_H

@@ -27,6 +27,8 @@ private:
     mat4 m_projMat;
     NRICP* m_nrICP;
 
+    //Aux
+    unsigned int m_clickActiveMeshIndex;
 
 public:
     GLFWContainer(int _width, int _height);
@@ -34,7 +36,7 @@ public:
 
     bool initializeWindow();
     void initializeDrawing();
-    void loadMesh(const char *_fileName);
+    void loadMesh(const char *_fileName, float *_transformations);
     void normaliseMeshes();
     void loopDrawing();
     void checkKeyPress();
@@ -57,6 +59,11 @@ public:
     Camera* getCamera(){ return m_camera; }
     NRICP* getNRICP(){ return m_nrICP; }
     Shader* getShader() { return m_shader; }
+
+    //Aux
+    Mesh* getClickActiveMesh() { return m_mesh[m_clickActiveMeshIndex]; }
+    unsigned int getClickActiveMeshIndex() { return m_clickActiveMeshIndex; }
+    void setClickActiveMeshIndex(unsigned int _click) { m_clickActiveMeshIndex = _click; }
 };
 
 #endif // MYGLFWWINDOW_H

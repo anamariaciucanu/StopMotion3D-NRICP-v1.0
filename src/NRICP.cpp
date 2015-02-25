@@ -6,6 +6,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_stiffness = 200.0;
+    m_beta = 1.0;
     m_epsilon = 5.0;
     m_gamma = 1.0;
     m_templateVertCount = m_template->getVertCount();
@@ -13,7 +14,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_targetAuxIndex = -1;
     m_templateAuxIndex = 33;
 
-// Defining adjMat ============================================
+// Defining adjMat
     m_adjMat = m_template->getAdjMat();
     if(!m_adjMat)
     {
@@ -21,11 +22,15 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
       m_adjMat = m_template->getAdjMat();
     }
 
-// Defining W =================NEW========================
+// Defining landmarks
+    m_landmarkCorrespondences = new std::vector<std::pair<unsigned int, unsigned int> >();
+    m_landmarkCorrespChanged = false;
+
+// Defining W
     m_W = new VectorXi(m_templateVertCount);
     m_W->setOnes(m_templateVertCount);
 
-// Defining D ========================================
+// Defining D
     m_D = m_template->getD();
     if(!m_D)
     {
@@ -33,18 +38,19 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
         m_D = m_template->getD();
     }
 
-// Defining U ==================NEW========================
+// Defining U
     m_U = new MatrixXf(m_templateVertCount, 3);
     m_U->setZero(m_templateVertCount, 3);
 
-// Defining X and X_prev ==================NEW========================
+// Defining X and X_prev
     m_X = new MatrixXf(4 * m_templateVertCount, 3);
     m_X->setZero(4 * m_templateVertCount, 3);
 
-// Defining Sphere Partitions ========NEW=========================================
+// Defining Sphere Partitions
    m_targetPartition = createPartitions(0, m_targetVertCount-1, m_targetPartition);
 
 //Sparse matrices A and B
+//Landmarks not included here
    m_templateEdgeCount = m_template->getEdgeCount();
    m_A = new  SparseMatrix<GLfloat> (4 * m_templateEdgeCount + m_templateVertCount, 4 * m_templateVertCount);
    m_A->reserve(8 * m_templateEdgeCount + 4 * m_templateVertCount);
@@ -58,6 +64,20 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 
 NRICP::~NRICP()
 {
+    if(m_adjMat)
+    {
+     delete m_adjMat;
+    }
+
+    if(m_landmarkCorrespondences)
+    {
+     delete m_landmarkCorrespondences;
+    }
+
+    if(m_D)
+    {
+     delete m_D;
+    }
 
     if(m_W)
     {
@@ -126,6 +146,17 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
     }
 
     return _partition;
+}
+
+void NRICP::addLandmarkCorrespondence()
+{
+ int l1 = m_template->getPickedVertexIndex();
+ int l2 = m_target->getPickedVertexIndex();
+
+ if(l1 >=0 && l2 >= 0)
+ {
+   m_landmarkCorrespondences->push_back(make_pair((unsigned int)l1, (unsigned int)l2));
+ }
 }
 
 void NRICP::destroyPartitions(SpherePartition* _partition)
@@ -384,7 +415,7 @@ void NRICP::determineOptimalDeformation()
        i++;
      }
 
-//W * D
+//W * D => unchanged
     for(unsigned int i = 0; i < m_templateVertCount; ++i)
     {
         auxRowIndex = i + 4 * m_templateEdgeCount;
@@ -404,6 +435,45 @@ void NRICP::determineOptimalDeformation()
         }
     }
 
+
+ //Beta * Dl and Ul
+
+    unsigned int noLandmarks = m_landmarkCorrespondences->size();
+    if(noLandmarks > 0 && m_landmarkCorrespChanged)
+    {
+        unsigned int sizeRowsA = 4 * m_templateEdgeCount + m_templateVertCount;
+        unsigned int sizeColsA = 4 * m_templateVertCount;
+        unsigned int sizeRowsB = 4 * m_templateEdgeCount + m_templateVertCount;
+        unsigned int sizeColsB = 3;
+        m_A->conservativeResize(sizeRowsA + noLandmarks, sizeColsA);
+        m_A->resizeNonZeros(8 * m_templateEdgeCount + 4 * m_templateVertCount + 4 * noLandmarks);
+        m_B->conservativeResize(sizeRowsB + noLandmarks, sizeColsB);
+        m_B->resizeNonZeros(3 * m_templateVertCount + 3 * noLandmarks);
+
+        for(unsigned int i = 0; i < noLandmarks; ++i)
+        {
+            unsigned int l1 = m_landmarkCorrespondences->at(i).first;
+            unsigned int l2 = m_landmarkCorrespondences->at(i).second;
+            unsigned four_l1 = 4*l1;
+            Vector3f point1 = m_template->getVertex(l1);
+            Vector3f point2 = m_target->getVertex(l2);
+
+            m_A->coeffRef(sizeRowsA + i, four_l1) = m_beta * point1[0];
+            m_A->coeffRef(sizeRowsA + i, four_l1 + 1) = m_beta * point1[1];
+            m_A->coeffRef(sizeRowsA + i, four_l1 + 2) = m_beta * point1[2];
+            m_A->coeffRef(sizeRowsA + i, four_l1) = m_beta;
+
+            m_B->coeffRef(sizeRowsB + i, 0) = point2[0];
+            m_B->coeffRef(sizeRowsB + i, 1) = point2[1];
+            m_B->coeffRef(sizeColsB + i, 2) = point2[2];
+        }
+
+        m_landmarkCorrespChanged = false;
+    }
+
+
+//Important stuff down here
+
     m_A->makeCompressed();
     m_B->makeCompressed();
 
@@ -415,6 +485,9 @@ void NRICP::determineOptimalDeformation()
     SparseMatrix<GLfloat> result = A_inv * (*m_A).transpose() * (*m_B);
     result.uncompress();
     (*m_X) = result;
+
+
+
 }
 
 void NRICP::deformTemplate()
