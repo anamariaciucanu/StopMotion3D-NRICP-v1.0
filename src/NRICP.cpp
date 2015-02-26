@@ -6,7 +6,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_stiffness = 200.0;
-    m_beta = 1.0;
+    m_beta = 0.9;
     m_epsilon = 5.0;
     m_gamma = 1.0;
     m_templateVertCount = m_template->getVertCount();
