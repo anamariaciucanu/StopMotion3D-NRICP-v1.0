@@ -381,7 +381,6 @@ void NRICP::determineOptimalDeformation()
   {
     //Find X = (At*A)-1 * At * B
     //For current stiffness
-
     unsigned int i = 0;
     unsigned int four_i = 0;
     unsigned int v1;
@@ -389,33 +388,43 @@ void NRICP::determineOptimalDeformation()
     unsigned int four_v1;
     unsigned int four_v2;
     unsigned int auxRowIndex;
-    int weight;
+    unsigned int noLandmarks = m_landmarkCorrespondences->size();
+    unsigned int sizeRowsA = 4 * m_templateEdgeCount + m_templateVertCount;
+    unsigned int sizeColsA = 4 * m_templateVertCount;
+    unsigned int sizeRowsB = 4 * m_templateEdgeCount + m_templateVertCount;
+    unsigned int sizeColsB = 3;
+    unsigned int weight;
+
+    if(noLandmarks > 0 && m_landmarkCorrespChanged)
+    {
+        //TO DO: Check/resize nonzeros
+        m_A->resize(sizeRowsA + noLandmarks, sizeColsA);
+        m_A->resizeNonZeros(8 * m_templateEdgeCount + 4 * m_templateVertCount + noLandmarks);
+        m_B->resize(sizeRowsB + noLandmarks, sizeColsB);
+        m_B->resizeNonZeros(3* (m_templateVertCount + noLandmarks));
+        m_landmarkCorrespChanged = false;
+    }
 
 //stiffness * M o G
-
     for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
-     {
+   {
        four_i = 4 * i; //for all edges
-
        v1 = it->first.first;
        v2 = it->first.second;
        four_v1 = 4 * v1;
        four_v2 = 4 * v2;
-
        m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
        m_A->coeffRef(four_i + 1, four_v1 + 1) = (-1) * m_stiffness;
        m_A->coeffRef(four_i + 2, four_v1 + 2) = (-1) * m_stiffness;
        m_A->coeffRef(four_i + 3, four_v1 + 3) = (-1) * m_stiffness * m_gamma;
-
        m_A->coeffRef(four_i, four_v2) = m_stiffness;
        m_A->coeffRef(four_i + 1, four_v2 + 1) = m_stiffness;
        m_A->coeffRef(four_i + 2, four_v2 + 2) = m_stiffness;
        m_A->coeffRef(four_i + 3, four_v2 + 3) = m_stiffness * m_gamma;
-
        i++;
-     }
+   }
 
-//W * D => unchanged
+//W * D
     for(unsigned int i = 0; i < m_templateVertCount; ++i)
     {
         auxRowIndex = i + 4 * m_templateEdgeCount;
@@ -437,43 +446,29 @@ void NRICP::determineOptimalDeformation()
 
 
  //Beta * Dl and Ul
+    for(unsigned int i = 0; i < noLandmarks; ++i)
+     {
+        unsigned int l1 = m_landmarkCorrespondences->at(i).first;
+        unsigned int l2 = m_landmarkCorrespondences->at(i).second;
+        unsigned int rowsA_i = sizeRowsA + i;
+        unsigned int rowsB_i = sizeRowsB + i;
+        unsigned four_l1 = 4*l1;
 
-    unsigned int noLandmarks = m_landmarkCorrespondences->size();
-    if(noLandmarks > 0 && m_landmarkCorrespChanged)
-    {
-        unsigned int sizeRowsA = 4 * m_templateEdgeCount + m_templateVertCount;
-        unsigned int sizeColsA = 4 * m_templateVertCount;
-        unsigned int sizeRowsB = 4 * m_templateEdgeCount + m_templateVertCount;
-        unsigned int sizeColsB = 3;
-        m_A->conservativeResize(sizeRowsA + noLandmarks, sizeColsA);
-        m_A->resizeNonZeros(8 * m_templateEdgeCount + 4 * m_templateVertCount + 4 * noLandmarks);
-        m_B->conservativeResize(sizeRowsB + noLandmarks, sizeColsB);
-        m_B->resizeNonZeros(3 * m_templateVertCount + 3 * noLandmarks);
+        Vector3f point1 = m_template->getVertex(l1);
+        Vector3f point2 = m_target->getVertex(l2);
 
-        for(unsigned int i = 0; i < noLandmarks; ++i)
-        {
-            unsigned int l1 = m_landmarkCorrespondences->at(i).first;
-            unsigned int l2 = m_landmarkCorrespondences->at(i).second;
-            unsigned four_l1 = 4*l1;
-            Vector3f point1 = m_template->getVertex(l1);
-            Vector3f point2 = m_target->getVertex(l2);
+        m_A->coeffRef(rowsA_i, four_l1) = m_beta * point1[0];
+        m_A->coeffRef(rowsA_i, four_l1 + 1) = m_beta * point1[1];
+        m_A->coeffRef(rowsA_i, four_l1 + 2) = m_beta * point1[2];
+        m_A->coeffRef(rowsA_i, four_l1 + 3) = m_beta;
 
-            m_A->coeffRef(sizeRowsA + i, four_l1) = m_beta * point1[0];
-            m_A->coeffRef(sizeRowsA + i, four_l1 + 1) = m_beta * point1[1];
-            m_A->coeffRef(sizeRowsA + i, four_l1 + 2) = m_beta * point1[2];
-            m_A->coeffRef(sizeRowsA + i, four_l1) = m_beta;
-
-            m_B->coeffRef(sizeRowsB + i, 0) = point2[0];
-            m_B->coeffRef(sizeRowsB + i, 1) = point2[1];
-            m_B->coeffRef(sizeColsB + i, 2) = point2[2];
-        }
-
-        m_landmarkCorrespChanged = false;
-    }
+        m_B->coeffRef(rowsB_i, 0) = point2[0];
+        m_B->coeffRef(rowsB_i, 1) = point2[1];
+        m_B->coeffRef(rowsB_i, 2) = point2[2];
+      }
 
 
 //Important stuff down here
-
     m_A->makeCompressed();
     m_B->makeCompressed();
 
@@ -485,9 +480,6 @@ void NRICP::determineOptimalDeformation()
     SparseMatrix<GLfloat> result = A_inv * (*m_A).transpose() * (*m_B);
     result.uncompress();
     (*m_X) = result;
-
-
-
 }
 
 void NRICP::deformTemplate()

@@ -5,6 +5,7 @@
 #include "matrix.h"
 #include "camera.h"
 #include "shader.h"
+#include "ICP.h"
 #include "NRICP.h"
 
 using namespace std;
@@ -25,6 +26,7 @@ private:
     mat4 m_modelMat;
     mat4 m_viewMat;
     mat4 m_projMat;
+    ICP* m_ICP;
     NRICP* m_nrICP;
 
     //Aux

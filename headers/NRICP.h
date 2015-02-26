@@ -57,6 +57,8 @@ public:
     void findCorrespondences();
     void determineOptimalDeformation();
     void deformTemplate();
+    void addLandmarkCorrespondence();
+    void clearLandmarkCorrespondences() { m_landmarkCorrespondences->clear(); }
     void modifyStiffness(float _val)
     {
       m_stiffness += _val;
@@ -65,8 +67,15 @@ public:
           m_stiffness = 1.0;
       }
     }
-    void addLandmarkCorrespondence();
-    void clearLandmarkCorrespondences() { m_landmarkCorrespondences->clear(); }
+    void modifyBeta(float _val)
+    {
+      m_beta += _val;
+      if(m_beta < 0.0)
+      {
+          m_beta = 0.0;
+      }
+    }
+
 
 //TO DO: Separate A elements and have add functions for them
 

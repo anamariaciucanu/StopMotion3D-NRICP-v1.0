@@ -679,32 +679,32 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
         { //ray intersection
            //Find intersection point
             Vector3f intersection = _origin + t * _ray;
-            float max = -100;
-            int imax;
+            float min = 100;
+            int imin;
 
             float distance1 = euclideanDistance(intersection, point1);
             float distance2 = euclideanDistance(intersection, point2);
             float distance3 = euclideanDistance(intersection, point3);
 
-            if(distance1 > max)
+            if(distance1 < min)
             {
-              max = distance1;
-              imax = v1;
+              min = distance1;
+              imin = v1;
             }
 
-            if (distance2 > max)
+            if (distance2 < min)
             {
-                max = distance2;
-                imax = v2;
+                min = distance2;
+                imin = v2;
             }
 
-            if(distance3 > max)
+            if(distance3 < min)
             {
-               max = distance3;
-               imax = v3;
+               min = distance3;
+               imin = v3;
             }
 
-            return imax;          
+            return imin;
         }
       }
     }

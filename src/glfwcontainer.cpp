@@ -211,8 +211,8 @@ void GLFWContainer::checkKeyPress()
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
-     m_nrICP->addLandmarkCorrespondence();
-     m_nrICP->setLandmarkCorrespChanged(true);
+      m_nrICP->addLandmarkCorrespondence();
+      m_nrICP->setLandmarkCorrespChanged(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_K)){
@@ -226,6 +226,7 @@ void GLFWContainer::checkKeyPress()
      //m_mesh[0]->calculateNormals();
      m_nrICP->getTemplate()->bindVAO1();
      m_nrICP->modifyStiffness(-1.0);
+     m_nrICP->modifyBeta(-0.1);
      //sleep(1);
     }
 }
@@ -256,10 +257,10 @@ void GLFWContainer::initializeDrawing()
     //Load a scene ============================================================================
     float transformations[6] = {130.0, 90.0, 0, -0.7, 0.0, 0.0};
     loadMesh("../models/Rob_Obj_TPose_LowRes.obj", transformations);
+    //loadMesh("../models/Cube1.obj", transformations);
     transformations[3] = 0.7;
     loadMesh("../models/Rob_Obj_Frame2_LowRes.obj", transformations);
-   // loadMesh("../models/Cube1.obj");
-   // loadMesh("../models/Cube2.obj");
+    //loadMesh("../models/Cube2.obj", transformations);
 
     //Obs! Some meshes might already have normals
     //Because we rotate points in lodMesh function it is neccesary to recalculate the normals
@@ -344,6 +345,7 @@ void GLFWContainer::loopDrawing()
       glBindVertexArray(m_mesh[0]->getVAO1());
       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      //glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
    //Draw mesh 2 =================================target===============================================
       m_shader->sendColourChoiceToShader(col2);
@@ -352,7 +354,7 @@ void GLFWContainer::loopDrawing()
       glBindVertexArray(m_mesh[1]->getVAO1());
       glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      //glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      //glDrawElements(GL_LINE_STRIP, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
     //Draw normals of template mesh ======================= template normals ===========================
 //      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
