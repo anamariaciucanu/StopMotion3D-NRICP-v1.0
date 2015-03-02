@@ -5,7 +5,6 @@
 #include "matrix.h"
 #include "camera.h"
 #include "shader.h"
-#include "ICP.h"
 #include "NRICP.h"
 
 using namespace std;
@@ -26,7 +25,6 @@ private:
     mat4 m_modelMat;
     mat4 m_viewMat;
     mat4 m_projMat;
-    ICP* m_ICP;
     NRICP* m_nrICP;
 
     //Aux
@@ -61,6 +59,7 @@ public:
     Camera* getCamera(){ return m_camera; }
     NRICP* getNRICP(){ return m_nrICP; }
     Shader* getShader() { return m_shader; }
+    void loadLandmarks(const char* _templateFile, const char* _targetFile);
 
     //Aux
     Mesh* getClickActiveMesh() { return m_mesh[m_clickActiveMeshIndex]; }

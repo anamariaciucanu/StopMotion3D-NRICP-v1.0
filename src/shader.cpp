@@ -100,14 +100,6 @@ void Shader::sendCameraRayToShader(vec3 _ray)
     glUniform3fv(2, 1, _ray.v);
 }
 
-void Shader::sendVertexIndexToShader(int _index)
-{
-    int vertexIndex = glGetUniformLocation(m_shaderProgramme, "vert_index");
-    glUseProgram(m_shaderProgramme);
-    glUniform1i(vertexIndex, _index);
-}
-
-
 void Shader::sendColourChoiceToShader(vec3 _colour)
 {
     int colourLocation = glGetUniformLocation(m_shaderProgramme, "col_choice_vert");
@@ -121,3 +113,27 @@ void Shader::sendColourPickedToShader(vec3 _colour)
     glUseProgram(m_shaderProgramme);
     glUniform3fv(colourLocation, 1, _colour.v);
 }
+
+void Shader::sendChosenIndexToShader(int _chosen)
+{
+  int chosen_index = glGetUniformLocation(m_shaderProgramme, "chosen_index");
+  glUseProgram(m_shaderProgramme);
+  glUniform1i(chosen_index, _chosen);
+}
+
+void Shader::sendVertexIndicesToShader(int _picked, std::vector<int>* _indices)
+{
+  int picked_index = glGetUniformLocation(m_shaderProgramme, "picked_index");
+  glUseProgram(m_shaderProgramme);
+  glUniform1i(picked_index, _picked);
+
+  int picked_indices_count = glGetUniformLocation(m_shaderProgramme, "picked_indices_count");
+  glUseProgram(m_shaderProgramme);
+  glUniform1i(picked_indices_count, _indices->size());
+
+  int picked_indices = glGetUniformLocation(m_shaderProgramme, "picked_indices");
+  glUseProgram(m_shaderProgramme);
+  int* auxVec = &(*_indices)[0];
+  glUniform1iv(picked_indices, _indices->size(), auxVec);
+}
+

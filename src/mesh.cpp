@@ -19,7 +19,8 @@ Mesh::Mesh()
     m_edgeCount = 0;
     m_faceCount = 0;
     m_texCoordCount = 0;
-    m_pickedVertexIndex = -1;
+    m_landmarkVertexIndices = new std::vector<int>();
+    m_pickedIndex = -1;
 }
 
 
@@ -42,22 +43,27 @@ Mesh::~Mesh()
 
  if(m_texcoords)
  {
-  delete [] m_texcoords;
+   delete [] m_texcoords;
  }
 
  if(m_faceIndices)
  {
-     delete [] m_faceIndices;
+   delete [] m_faceIndices;
  }
 
  if(m_adjMat)
  {
-     delete m_adjMat;
+   delete m_adjMat;
  }
 
  if(m_D)
  {
-     delete m_D;
+   delete m_D;
+ }
+
+ if(m_landmarkVertexIndices)
+ {
+   delete m_landmarkVertexIndices;
  }
 }
 
@@ -176,6 +182,22 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
     // buildVertexNormalVector();
 
     return true;
+}
+
+void Mesh::printPickedPoints(const char*_fileName)
+{
+  ofstream file;
+  file.open(_fileName);
+  int size = m_landmarkVertexIndices->size();
+
+  for(unsigned int i=0; i<size; ++i)
+  {
+   file << m_landmarkVertexIndices->at(i);
+   file << "\n";
+  }
+
+  file.flush();
+  file.close();
 }
 
 void Mesh::calculateNormals()
@@ -370,7 +392,6 @@ void Mesh::bindVAO1()
         glGenBuffers(1, &m_vbo2Position);
         glBindBuffer(GL_ARRAY_BUFFER, m_vbo2Position);
         glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount * sizeof(GLfloat), &m_vertices->at(0), GL_STATIC_DRAW);
-
     }
 
 //Obs! 14 coordinates instead of 8
@@ -482,23 +503,6 @@ void Mesh::buildVertexMatrix()
   m_D->makeCompressed();
 }
 
-void Mesh::changeVertsBasedOn_D_Matrix()
-{    
-    if(m_D)
-    {
-     unsigned int three_i = 0;
-     unsigned int four_i = 0;
-
-     for (unsigned int i=0; i < m_vertCount;i++)
-     {
-       three_i = 3 * i;
-       four_i = 4 * i;
-       m_vertices->at(three_i) = m_D->coeff(i, four_i);
-       m_vertices->at(three_i+ 1) = m_D->coeff(i, four_i + 1);
-       m_vertices->at(three_i + 2) = m_D->coeff(i, four_i + 2);
-     }
-    }
-}
 
 Vector3f Mesh::getNormal(unsigned int _vertNo)
 {
@@ -709,6 +713,30 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
     }
 
  return -1;
+}
+
+
+void Mesh::affineTransformation(MatrixXf _X)
+{
+    unsigned int three_i;
+    Vector3f vertex;
+
+    for(unsigned int i=0; i < m_vertCount; ++i)
+    {
+        three_i = 3*i;
+        vertex[0] = m_vertices->at(three_i);
+        vertex[1] = m_vertices->at(three_i + 1);
+        vertex[2] = m_vertices->at(three_i + 2);
+
+        vertex[0] = _X(0,0) * vertex[0] + _X(1, 0)* vertex[1] + _X(2, 0)*vertex[2] + _X(3, 0);
+        vertex[1] = _X(0,1) * vertex[0] + _X(1, 1)* vertex[1] + _X(2, 1)*vertex[2] + _X(3, 1);
+        vertex[2] = _X(0,2) * vertex[0] + _X(1, 2)* vertex[1] + _X(2, 2)*vertex[2] + _X(3, 2);
+
+        m_vertices->at(three_i) = vertex[0];
+        m_vertices->at(three_i + 1) = vertex[1];
+        m_vertices->at(three_i + 2) = vertex[2];
+    }
+
 }
 
 

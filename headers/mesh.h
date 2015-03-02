@@ -42,7 +42,9 @@ private:
     GLuint m_vao2;
 
     //Aux
-    unsigned int m_pickedVertexIndex;
+
+    std::vector<int>* m_landmarkVertexIndices;
+    int m_pickedIndex;
 
 
 
@@ -50,15 +52,16 @@ public:
     Mesh();
     ~Mesh();
     bool loadMesh(const char* _fileName, float *_transformations);
+    void printPickedPoints(const char*_fileName);
     void calculateNormals();
     void normaliseMesh();
     void bindVAO1();
     void bindVAO2();
     void buildArcNodeMatrix();
     void buildVertexMatrix();
-    void  buildVertexNormalVector();
-    void changeVertsBasedOn_D_Matrix();
+    void buildVertexNormalVector();
     int whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vector3f _origin, Vector3f _ray);
+    void affineTransformation(MatrixXf _X);
 
     //Setters and getters
     std::vector<GLfloat>* getVertices(){return m_vertices;}
@@ -87,8 +90,30 @@ public:
     float euclideanDistance(Vector3f _v1, Vector3f _v2);
 
     //Aux
-    int getPickedVertexIndex(){ return m_pickedVertexIndex; }
-    void setPickedVertexIndex(int _index) { m_pickedVertexIndex = _index; }
+   void addLandmarkVertexIndex()
+   {
+    m_landmarkVertexIndices->push_back(m_pickedIndex);
+   }
+
+   void clearLandmarkVertexIndices()
+   {
+    m_landmarkVertexIndices->clear();
+   }
+
+   std::vector<int>* getLandmarkVertexIndices()
+    {
+     return m_landmarkVertexIndices;
+    }
+
+   int getPickedVertexIndex()
+   {
+    return m_pickedIndex;
+   }
+
+   void setPickedVertexIndex(int _index)
+   {
+    m_pickedIndex = _index;
+   }
 
 };
 #endif // MESH_H

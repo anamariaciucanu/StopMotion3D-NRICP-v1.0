@@ -2,6 +2,7 @@
 #define SHADER_H
 #include "logger.h"
 #include "matrix.h"
+#include <vector>
 
 class Shader {
 
@@ -24,7 +25,8 @@ public:
     void sendCameraRayToShader(vec3 _ray);
     void sendColourChoiceToShader(vec3 _colour);
     void sendColourPickedToShader(vec3 _colour);
-    void sendVertexIndexToShader(int _index);
+    void sendVertexIndicesToShader(int _picked, std::vector<int> *_indices);
+    void sendChosenIndexToShader(int _chosen);
 
     GLuint getShaderProgramme() { return m_shaderProgramme; }
 };

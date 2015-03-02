@@ -101,7 +101,6 @@ void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
 
 void GLFWContainer::normaliseMeshes()
 {
-
     for(unsigned int i = 0; i < m_meshCount; ++i)
     {
         m_mesh[i]->normaliseMesh();
@@ -198,9 +197,6 @@ void GLFWContainer::checkKeyPress()
      m_objZRot -= 0.05;
     }
 
-    else if(glfwGetKey(m_window, GLFW_KEY_0)){
-     getClickActiveMesh()->setPickedVertexIndex(-1);
-    }
 
     else if(glfwGetKey(m_window, GLFW_KEY_1)){
      setClickActiveMeshIndex(0);
@@ -213,7 +209,7 @@ void GLFWContainer::checkKeyPress()
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
       m_nrICP->addLandmarkCorrespondence();
       m_nrICP->setLandmarkCorrespChanged(true);
-      //sleep(1.0);
+      sleep(1.0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_K)){
@@ -222,13 +218,26 @@ void GLFWContainer::checkKeyPress()
      sleep(1.0);
     }
 
+    else if(glfwGetKey(m_window, GLFW_KEY_Y))
+    {
+     m_nrICP->calculateRigidTransformation();
+     m_nrICP->getTemplate()->bindVAO1();
+     sleep(1.0);
+    }
+
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
-     m_nrICP->calculateTransformation();
+     m_nrICP->calculateNonRigidTransformation();
      //m_mesh[0]->calculateNormals();
      m_nrICP->getTemplate()->bindVAO1();
      m_nrICP->modifyStiffness(-1.0);
-     //sleep(1);
+     sleep(1.0);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_P))
+    {
+      m_mesh[0]->printPickedPoints("../logs/landmarks_template.txt");
+      m_mesh[1]->printPickedPoints("../logs/landmarks_target.txt");
     }
 }
 
@@ -270,7 +279,9 @@ void GLFWContainer::initializeDrawing()
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
 
-    //Transformations =========================================================================
+   loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+
+     //Transformations =========================================================================
      //Model matrix
      //column major matrix - that's how shaders prefer it
      m_modelMat = identity_mat4();
@@ -341,8 +352,8 @@ void GLFWContainer::loopDrawing()
 
    //Draw mesh 1 ===============================template==============================================
       m_shader->sendColourChoiceToShader(col1);
-      //m_shader->sendVertexIndexToShader(m_nrICP->getTemplateAuxIndex());
-      m_shader->sendVertexIndexToShader(m_mesh[0]->getPickedVertexIndex());
+      m_shader->sendChosenIndexToShader(m_nrICP->getTemplateAuxIndex());
+      m_shader->sendVertexIndicesToShader(m_mesh[0]->getPickedVertexIndex(), m_mesh[0]->getLandmarkVertexIndices());
       glUseProgram(m_shader->getShaderProgramme());
       glBindVertexArray(m_mesh[0]->getVAO1());
       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
@@ -351,8 +362,8 @@ void GLFWContainer::loopDrawing()
 
    //Draw mesh 2 =================================target===============================================
       m_shader->sendColourChoiceToShader(col2);
-      //m_shader->sendVertexIndexToShader(m_nrICP->getTargetAuxIndex());
-      m_shader->sendVertexIndexToShader(m_mesh[1]->getPickedVertexIndex());
+      m_shader->sendChosenIndexToShader(m_nrICP->getTargetAuxIndex());
+      m_shader->sendVertexIndicesToShader(m_mesh[1]->getPickedVertexIndex(), m_mesh[1]->getLandmarkVertexIndices());
       glBindVertexArray(m_mesh[1]->getVAO1());
       //glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
@@ -382,6 +393,43 @@ void GLFWContainer::loopDrawing()
 
     //close GL contextand any other GLFW resources
     glfwTerminate();
+}
+
+void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _targetFile)
+{
+    ifstream in1(_templateFile, ios::in);
+    if (!in1)
+    {
+     printf("Cannot open %s",_templateFile);
+     return;
+    }
+
+    ifstream in2(_targetFile, ios::in);
+    if (!in2)
+    {
+     printf("Cannot open %s",_targetFile);
+     return;
+    }
+
+
+    string line1, line2;
+    int l1, l2;
+    while (getline(in1, line1), getline(in2, line2))
+    {
+     istringstream s1(line1);
+     istringstream s2(line2);
+
+     s1 >> l1;
+     s2 >> l2;
+
+     m_mesh[0]->setPickedVertexIndex(l1);
+     m_mesh[0]->addLandmarkVertexIndex();
+     m_mesh[1]->setPickedVertexIndex(l2);
+     m_mesh[1]->addLandmarkVertexIndex();
+     m_nrICP->addLandmarkCorrespondence();
+    }
+
+     m_nrICP->setLandmarkCorrespChanged(true);
 }
 
 void GLFWContainer::printConfiguration()

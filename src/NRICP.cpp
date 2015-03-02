@@ -6,13 +6,14 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_stiffness = 200.0;
-    m_beta = 0.9;
+    m_beta = 1.0;
     m_epsilon = 5.0;
     m_gamma = 1.0;
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
     m_targetAuxIndex = -1;
-    m_templateAuxIndex = 33;
+    m_templateAuxIndex = 35;
+    m_landmarkCorrespondenceCount = 0;
 
 // Defining adjMat
     m_adjMat = m_template->getAdjMat();
@@ -56,7 +57,9 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
    m_A->reserve(8 * m_templateEdgeCount + 4 * m_templateVertCount);
    m_B = new  SparseMatrix<GLfloat> (4 * m_templateEdgeCount + m_templateVertCount, 3);
    m_B->reserve(3 * m_templateVertCount);
-
+   m_Xicp = new MatrixXf(4, 3);
+   m_Dicp = new SparseMatrix<float>(1, 4);
+   m_Uicp = new SparseMatrix<float>(1, 3);
 
 //Aux
    //myfile.open("../logs/times6.txt");
@@ -104,6 +107,21 @@ NRICP::~NRICP()
     if(m_B)
     {
      delete m_B;
+    }
+
+    if(m_Uicp)
+    {
+     delete m_Uicp;
+    }
+
+    if(m_Dicp)
+    {
+     delete m_Dicp;
+    }
+
+    if(m_Xicp)
+    {
+     delete m_Xicp;
     }
 
   //  myfile.close();
@@ -156,6 +174,9 @@ void NRICP::addLandmarkCorrespondence()
  if(l1 >=0 && l2 >= 0)
  {
    m_landmarkCorrespondences->push_back(make_pair((unsigned int)l1, (unsigned int)l2));
+   m_template->addLandmarkVertexIndex();
+   m_target->addLandmarkVertexIndex();
+   m_landmarkCorrespondenceCount++;
  }
 }
 
@@ -180,7 +201,7 @@ void NRICP::destroyPartitions(SpherePartition* _partition)
     }
 }
 
-void NRICP::calculateTransformation()
+void NRICP::calculateNonRigidTransformation()
 {
     MatrixXf* X_prev = new MatrixXf(4 * m_templateVertCount, 3);
     X_prev->setZero(4 * m_templateVertCount, 3);
@@ -203,10 +224,46 @@ void NRICP::calculateTransformation()
       determineOptimalDeformation();
       deformTemplate();
       changes = normedDifference(X_prev, m_X);
-      myfile<<changes<<"\n";
      }     
 
      delete X_prev;
+}
+
+void NRICP::calculateRigidTransformation()
+{
+    if(m_landmarkCorrespondenceCount > 0)
+    {
+      m_Dicp->resize(m_landmarkCorrespondenceCount, 4);
+      m_Uicp->resize(m_landmarkCorrespondenceCount, 3);
+
+      for(unsigned int i = 0; i < m_landmarkCorrespondenceCount; ++i)
+      {
+          unsigned int l1 = m_landmarkCorrespondences->at(i).first;
+          unsigned int l2 = m_landmarkCorrespondences->at(i).second;
+          Vector3f point1 = m_template->getVertex(l1);
+          Vector3f point2 = m_target->getVertex(l2);
+
+          m_Dicp->coeffRef(i, 0) = point1[0];
+          m_Dicp->coeffRef(i, 1) = point1[1];
+          m_Dicp->coeffRef(i, 2) = point1[2];
+          m_Dicp->coeffRef(i, 3) = 1.0;
+
+          m_Uicp->coeffRef(i, 0) = point2[0];
+          m_Uicp->coeffRef(i, 1) = point2[1];
+          m_Uicp->coeffRef(i, 2) = point2[2];
+      }
+
+      m_Dicp->makeCompressed();
+      m_Uicp->makeCompressed();
+
+      SparseQR <SparseMatrix<float>,  COLAMDOrdering<int> > solver;
+      solver.compute(*m_Dicp);
+      SparseMatrix<float> sol = solver.solve(*m_Uicp);
+      sol.uncompress();
+     (*m_Xicp) = sol;
+
+      m_template->affineTransformation(*m_Xicp);
+   }
 }
 
 float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
@@ -306,10 +363,9 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
       float distance = 0.0;
       float minDistance = 1000.0;
       bool foundCorrespondence = false;
-      unsigned int targetIndex = 0;
       Vector3f auxUi(0.0, 0.0, 0.0);
+      unsigned int targetIndex = 0;
       unsigned int three_j;
-      myfile.open("../logs/distances.txt", std::fstream::app);
 
       templateVertex[0] = vertsTemplate->at(_templateIndex * 3);
       templateVertex[1] = vertsTemplate->at(_templateIndex * 3 + 1);
@@ -336,23 +392,23 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
 
         if(foundCorrespondence)
         {
-          Vector3f ray = auxUi - templateVertex;
-          ray = ray/sqrt(ray[0]*ray[0] + ray[1]*ray[1] + ray[2]*ray[2]);
+         // Vector3f ray = auxUi - templateVertex;
+         // ray = ray/sqrt(ray[0]*ray[0] + ray[1]*ray[1] + ray[2]*ray[2]);
 
-          if(m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray) < 0) //No intersection - GooD!
+          //if(m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray) < 0) //No intersection - GooD!
           {
-           Vector3f templateNormal = m_template->getNormal(_templateIndex);
-           Vector3f targetNormal = m_target->getNormal(targetIndex);
-           float normalDot = templateNormal.dot(targetNormal);
+           //Vector3f templateNormal = m_template->getNormal(_templateIndex);
+          // Vector3f targetNormal = m_target->getNormal(targetIndex);
+         //  float normalDot = templateNormal.dot(targetNormal);
 
-           if(normalDot >= 0.5 && normalDot <= 1.0)
+           //if(normalDot >= 0.5 && normalDot <= 1.0)
            {
             (*m_U)(_templateIndex, 0) = auxUi[0];
             (*m_U)(_templateIndex, 1) = auxUi[1];
             (*m_U)(_templateIndex, 2) = auxUi[2];
 
             //Found correspondence => paint correspondence vertex green
-            if(_templateIndex + 1 == m_templateAuxIndex + 1)
+            if(_templateIndex == m_templateAuxIndex)
              {
               m_targetAuxIndex = targetIndex;
              }
@@ -361,14 +417,14 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
               m_targetAuxIndex = -1;
              }
             }
-           else
+         //  else
             {
-             (*m_W)(_templateIndex) = 0.0;
+           //  (*m_W)(_templateIndex) = 0.0;
             }
            }
-          else
+         // else
           {
-           (*m_W)(_templateIndex) = 0.0;
+           //(*m_W)(_templateIndex) = 0.0;
           }
        }
        else
@@ -431,8 +487,6 @@ void NRICP::determineOptimalDeformation()
         four_i = 4 * i;
         weight = (*m_W)(i);
 
-        if(weight > 0)
-        {
          m_A->coeffRef(auxRowIndex, four_i) = m_D->coeff(i, four_i) * weight;
          m_A->coeffRef(auxRowIndex, four_i + 1) = m_D->coeff(i, four_i + 1) * weight;
          m_A->coeffRef(auxRowIndex, four_i + 2) = m_D->coeff(i, four_i + 2) * weight;
@@ -440,8 +494,7 @@ void NRICP::determineOptimalDeformation()
 
          m_B->coeffRef(auxRowIndex, 0) = (*m_U)(i, 0) * weight;
          m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1) * weight;
-         m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;
-        }
+         m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;        
     }
 
 
@@ -484,7 +537,8 @@ void NRICP::determineOptimalDeformation()
 
 void NRICP::deformTemplate()
   {
-      unsigned int four_i;
+      unsigned int three_i, four_i;
+      std::vector<GLfloat>* vertices = m_template->getVertices();
       MatrixXf auxMultiplication(m_templateVertCount, 3);
       auxMultiplication = (*m_D) * (*m_X);
 
@@ -493,13 +547,17 @@ void NRICP::deformTemplate()
 
       for(unsigned int i = 0; i < m_templateVertCount; ++i)
       {
+        three_i = 3 * i;
         four_i = 4 * i;
         m_D->coeffRef(i, four_i) = auxMultiplication(i, 0);
         m_D->coeffRef(i, four_i + 1) = auxMultiplication(i, 1);
         m_D->coeffRef(i, four_i + 2) = auxMultiplication(i, 2);
+
+        vertices->at(three_i) = auxMultiplication(i, 0);
+        vertices->at(three_i+ 1) =  auxMultiplication(i, 1);
+        vertices->at(three_i + 2) = auxMultiplication(i, 2);
       }
 
-      m_template->changeVertsBasedOn_D_Matrix();
       m_D->makeCompressed();
   }
 
