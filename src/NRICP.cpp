@@ -166,20 +166,6 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
     return _partition;
 }
 
-void NRICP::addLandmarkCorrespondence()
-{
- int l1 = m_template->getPickedVertexIndex();
- int l2 = m_target->getPickedVertexIndex();
-
- if(l1 >=0 && l2 >= 0)
- {
-   m_landmarkCorrespondences->push_back(make_pair((unsigned int)l1, (unsigned int)l2));
-   m_template->addLandmarkVertexIndex();
-   m_target->addLandmarkVertexIndex();
-   m_landmarkCorrespondenceCount++;
- }
-}
-
 void NRICP::destroyPartitions(SpherePartition* _partition)
 {
     if(_partition)
@@ -199,6 +185,30 @@ void NRICP::destroyPartitions(SpherePartition* _partition)
            destroyPartitions(_partition->left);
         }
     }
+}
+
+void NRICP::addLandmarkCorrespondence()
+{
+ int l1 = m_template->getPickedVertexIndex();
+ int l2 = m_target->getPickedVertexIndex();
+
+ if(l1 >=0 && l2 >= 0)
+ {
+   m_landmarkCorrespondences->push_back(make_pair((unsigned int)l1, (unsigned int)l2));
+   m_template->addLandmarkVertexIndex();
+   m_target->addLandmarkVertexIndex();
+   m_landmarkCorrespondenceCount ++;
+   m_landmarkCorrespChanged = true;
+ }
+}
+
+void NRICP::clearLandmarkCorrespondences()
+{
+    m_landmarkCorrespondences->clear();
+    m_template->clearLandmarkVertexIndices();
+    m_target->clearLandmarkVertexIndices();
+    m_landmarkCorrespondenceCount = 0;
+    m_landmarkCorrespChanged = true;
 }
 
 void NRICP::calculateNonRigidTransformation()
@@ -291,6 +301,7 @@ void NRICP::findCorrespondences()
       float distance_right = 0.0;
       unsigned int three_i;
       m_targetAuxIndex = -1;
+      m_W->setOnes();
 
       for (unsigned int i = 0; i < m_templateVertCount; ++i)
       {
@@ -392,17 +403,16 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
 
         if(foundCorrespondence)
         {
-         // Vector3f ray = auxUi - templateVertex;
-         // ray = ray/sqrt(ray[0]*ray[0] + ray[1]*ray[1] + ray[2]*ray[2]);
+          Vector3f ray = auxUi - templateVertex;
 
-          //if(m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray) < 0) //No intersection - GooD!
+          if(m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray) < 0) //No intersection - GooD!
           {
            //Vector3f templateNormal = m_template->getNormal(_templateIndex);
           // Vector3f targetNormal = m_target->getNormal(targetIndex);
          //  float normalDot = templateNormal.dot(targetNormal);
 
            //if(normalDot >= 0.5 && normalDot <= 1.0)
-           {
+         //  {
             (*m_U)(_templateIndex, 0) = auxUi[0];
             (*m_U)(_templateIndex, 1) = auxUi[1];
             (*m_U)(_templateIndex, 2) = auxUi[2];
@@ -416,15 +426,15 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
              {
               m_targetAuxIndex = -1;
              }
-            }
+         //   }
          //  else
-            {
+           // {
            //  (*m_W)(_templateIndex) = 0.0;
-            }
+            //}
            }
-         // else
+          else
           {
-           //(*m_W)(_templateIndex) = 0.0;
+           (*m_W)(_templateIndex) = 0.0;
           }
        }
        else
@@ -561,7 +571,6 @@ void NRICP::deformTemplate()
       m_D->makeCompressed();
   }
 
-//Auxiliary
 float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
   {
       float diff1 = _v1[0] - _v2[0];

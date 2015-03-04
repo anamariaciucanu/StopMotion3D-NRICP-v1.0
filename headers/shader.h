@@ -1,3 +1,6 @@
+//TO DO: Comment code
+
+
 #ifndef SHADER_H
 #define SHADER_H
 #include "logger.h"

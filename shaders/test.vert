@@ -21,7 +21,7 @@ void main()
   normal_eye = vec3(view * model * vec4(vertex_normal, 0.0));
   gl_Position = proj * view * model * vec4(vertex_position, 1.0);
 
-  if(gl_VertexID == chosen_index)
+  if(gl_VertexID == picked_index)
   {
    gl_PointSize = 10.0;
    col_choice_frag = col_picked_vert;

@@ -1,11 +1,17 @@
 #ifndef LOAD_FUNCTIONS_H
 #define LOAD_FUNCTIONS_H
 
+///@file load_functions.h
+///@brief loads text from files, used mostly for shaders
+///@author Web
 
 
-char* file_read(const char* filename)
+///@brief loads text from file
+///@param [in] _filename -> the file to be opened and read
+///@param [out] char* -> string of characters representing the text in the file
+char* file_read(const char* _filename)
 {
-      FILE* input = fopen(filename, "rb");
+      FILE* input = fopen(_filename, "rb");
       if(input == NULL) return NULL;
 
       if(fseek(input, 0, SEEK_END) == -1) return NULL;

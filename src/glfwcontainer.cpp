@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <string>
 
-
-
 GLFWContainer::GLFWContainer(int _width, int _height)
 {
     m_gl_width = _width;
@@ -46,38 +44,39 @@ GLFWContainer::~GLFWContainer()
     {
 //        delete m_window;
     }
-
 }
 
 bool GLFWContainer::initializeWindow()
 {
+  //Starting the error log
+  assert(m_logger->restart_gl_log());
 
-    //Starting the error log
-    assert(m_logger->restart_gl_log());
-    //Start GL context and OS window using the GLFW helper library
-    m_logger->gl_log("Starting GLFW\n%s\n", glfwGetVersionString());
+  //Start GL context and OS window using the GLFW helper library
+   m_logger->gl_log("Starting GLFW\n%s\n", glfwGetVersionString());
 
-   //Start GL context and OS window using the GLFW helper library
-   if(!glfwInit())
+  //Start GL context and OS window using the GLFW helper library
+  if(!glfwInit())
    {
     fprintf(stderr, "ERROR:could not start GLFW3\n");
     return false;
    }
 
-  m_window = glfwCreateWindow(m_gl_width, m_gl_height, "Stop Motion 3D", NULL, NULL);
-  m_camera = new Camera(m_gl_width, m_gl_height);
+   m_window = glfwCreateWindow(m_gl_width, m_gl_height, "Stop Motion 3D", NULL, NULL);
+   m_camera = new Camera(m_gl_width, m_gl_height);
 
- if (!m_window)
- {
-  fprintf(stderr, "ERROR:could not open window with GLFW3\n");
-  glfwTerminate();
-  return false;
- }
+   if (!m_window)
+    {
+     fprintf(stderr, "ERROR:could not open window with GLFW3\n");
+     glfwTerminate();
+     return false;
+    }
 
- glfwMakeContextCurrent(m_window);
- //Log info
- m_logger->log_gl_params();
- return true;
+    glfwMakeContextCurrent(m_window);
+
+    //Log info
+    m_logger->log_gl_params();
+
+    return true;
 }
 
 void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
@@ -85,7 +84,7 @@ void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
     m_mesh[m_meshCount] = new Mesh();
     if(m_mesh[m_meshCount]->loadMesh(_fileName, _transformations))
     {
-     if(m_mesh[m_meshCount]->getNormals()->size()<1)
+     if(m_mesh[m_meshCount]->getNormals()->size() < 1)
      {
          m_mesh[m_meshCount]->calculateNormals();
      }
@@ -98,7 +97,6 @@ void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
     }
 }
 
-
 void GLFWContainer::normaliseMeshes()
 {
     for(unsigned int i = 0; i < m_meshCount; ++i)
@@ -106,7 +104,6 @@ void GLFWContainer::normaliseMeshes()
         m_mesh[i]->normaliseMesh();
     }
 }
-
 
 void GLFWContainer::update_fps_counter()
 {
@@ -152,7 +149,6 @@ void GLFWContainer::checkKeyPress()
 
 
     //control keys
-
     if(glfwGetKey(m_window, GLFW_KEY_A)){
       m_camera->translate(0, -m_camera->getSpeed() * elapsed_seconds);
       m_camera->setMoved(true);
@@ -236,17 +232,16 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_P))
     {
-      m_mesh[0]->printPickedPoints("../logs/landmarks_template.txt");
-      m_mesh[1]->printPickedPoints("../logs/landmarks_target.txt");
+      m_mesh[0]->printLandmarkedPoints("../logs/landmarks_template.txt");
+      m_mesh[1]->printLandmarkedPoints("../logs/landmarks_target.txt");
+      sleep(1.0);
     }
 }
-
 
 void GLFWContainer::checkMeshIntersection(vec3 _ray)
 {
   m_shader->sendCameraRayToShader(_ray);
 }
-
 
 void GLFWContainer::initializeDrawing()
 {
@@ -265,7 +260,6 @@ void GLFWContainer::initializeDrawing()
 
 
     //Load a scene ============================================================================
-    //float transformations[6] = {130.0, 90.0, 0, -0.7, 0.0, 0.0};
      float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
     loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
     //loadMesh("../models/Cube1.obj", transformations);
@@ -273,27 +267,24 @@ void GLFWContainer::initializeDrawing()
     loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
     //loadMesh("../models/Cube2.obj", transformations);
 
-    //Obs! Some meshes might already have normals
-    //Because we rotate points in lodMesh function it is neccesary to recalculate the normals
-
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
 
-   loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
-     //Transformations =========================================================================
-     //Model matrix
-     //column major matrix - that's how shaders prefer it
+    //Transformations =========================================================================
+    //Model matrix
+    //column major matrix - that's how shaders prefer it
      m_modelMat = identity_mat4();
 
-     //View matrix
-     mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
-     mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
-     m_viewMat = R*T;
+    //View matrix
+    mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
+    mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
+    m_viewMat = R*T;
 
-     //Projection matrix
-     //Change when resizing window
-     m_projMat = mat4(
+    //Projection matrix
+    //Change when resizing window
+    m_projMat = mat4(
          m_camera->getSx(), 0.0f, 0.0f, 0.0f,
          0.0f, m_camera->getSy(), 0.0f, 0.0f,
          0.0f, 0.0f, m_camera->getSz(), -1.0f,

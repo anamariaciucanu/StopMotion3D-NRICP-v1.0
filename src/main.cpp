@@ -3,24 +3,24 @@ Compile with  g++ -o demo main.cpp libGLEW.a libglfw3.a -I include -lGL -lX11 -l
 Use valgrind --leak-check=full to check for memory leaks.
 */
 
-//Resources used:
-//http://openglbook.com/
-//Anton's OpenGL Tutorials Book
-//www.opengl-tutorial.org
-
-
-
-//TO DO: Memory release
-//TO DO: Destroy buffers
-//TO DO: Create vector of meshes in glfwcontainer.cpp
-//TO DO: Calculate vertex normals from face normals
+/// @author Anamaria Ciucanu
+/// @date January - March 2015
+/// @brief
+/// This is the implementation of [52] Amberg et. al (2007) Nonrigid Iterative Closest Point Algorithm with the following contributions:
+/// (...)
+///@ref (1) http://openglbook.com/
+///@ref (2) Anton's OpenGL Tutorials Book, 2014
+///@ref (3) www.opengl-tutorial.org
+///@ref (4) Fast, Minimum Storage Ray/Triangle Intersection, Möller & Trumbore. Journal of Graphics Tools, 1997
 
 #include "glfwcontainer.h"
 
-
+//Container has the GLFW window where OpenGL is rendered
 GLFWContainer* glfw_container = new GLFWContainer(1280, 720);
 
-
+//Starting from the image plane, a ray is transformed using the inverse of the projection-view-world-local matrices
+//to obtain a ray in local coordinates, which will then be used to check if it intersects the mesh.
+//Each triangle is checked against the ray. If an intersection does occur, the nearest vertex is returned and set as "picked"
 void calculateClickRay(double _mouseX, double _mouseY)
 {
     Camera* cam = glfw_container->getCamera();
@@ -58,18 +58,20 @@ void calculateClickRay(double _mouseX, double _mouseY)
     }
 }
 
-
+//Activated when the window is resized
 void glfw_window_size_callback(GLFWwindow* _window, int _width, int _height)
 {
     glfw_container->setWidth(_width);
     glfw_container->setHeight(_height);
 }
 
+//Activated when an error occured
 void glfw_error_callback(int error, const char* description)
 {
    glfw_container->getLogger()->gl_log_err("GLFW ERROR: code %i msg: %s\n", error, description);
 }
 
+//Activated when the left mouse button is clicked
 void mouseClickEvent(GLFWwindow *_window, int _button, int _action, int _mods)
 {
 
@@ -84,10 +86,13 @@ void mouseClickEvent(GLFWwindow *_window, int _button, int _action, int _mods)
 
 
 int main(){
+
+//Multi-threading activated
     omp_set_num_threads(8);
     Eigen::setNbThreads(8);
     Eigen::initParallel();
 
+//Initialize window, callback functions and drawing functions
     glfw_container->initializeWindow();
     glfwSetWindowSizeCallback(glfw_container->getWindow(), glfw_window_size_callback);
     glfwSetMouseButtonCallback(glfw_container->getWindow(), mouseClickEvent);

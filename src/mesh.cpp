@@ -23,7 +23,6 @@ Mesh::Mesh()
     m_pickedIndex = -1;
 }
 
-
 Mesh::~Mesh()
 {
  if(m_vertices)
@@ -184,7 +183,7 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
     return true;
 }
 
-void Mesh::printPickedPoints(const char*_fileName)
+void Mesh::printLandmarkedPoints(const char*_fileName)
 {
   ofstream file;
   file.open(_fileName);
@@ -281,7 +280,7 @@ void Mesh::normaliseNormals()
     }
 }
 
- void  Mesh::buildVertexNormalVector()
+void Mesh::buildVertexNormalVector()
  {
      if(m_vertNormalLines->size()<1)
      {
@@ -316,19 +315,18 @@ void Mesh::normaliseNormals()
 
 void Mesh::normaliseMesh()
 {
-    //Find min and max for x, y, z
+ //Find min and max for x, y, z
+ float min_x = 1000.0;
+ float min_y = 1000.0;
+ float min_z = 1000.0;
+ float max_x = -1000.0;
+ float max_y = -1000.0;
+ float max_z = -1000.0;
+ float aux;
+ unsigned int three_i;
 
-    float min_x = 1000.0;
-    float min_y = 1000.0;
-    float min_z = 1000.0;
-    float max_x = -1000.0;
-    float max_y = -1000.0;
-    float max_z = -1000.0;
-    float aux;
-    unsigned int three_i;
-
-    for (unsigned int i = 0; i < m_vertCount; ++i)
-    {
+ for (unsigned int i = 0; i < m_vertCount; ++i)
+  {
         three_i = 3*i;
 
         aux = m_vertices->at(three_i);
@@ -478,7 +476,6 @@ void Mesh::buildArcNodeMatrix()
    }
 }
 
-
 void Mesh::buildVertexMatrix()
 {
   if(!m_D)
@@ -503,7 +500,6 @@ void Mesh::buildVertexMatrix()
   m_D->makeCompressed();
 }
 
-
 Vector3f Mesh::getNormal(unsigned int _vertNo)
 {
     Vector3f normal(0.0, 0.0, 0.0);
@@ -516,7 +512,6 @@ Vector3f Mesh::getNormal(unsigned int _vertNo)
     }
     return normal;
 }
-
 
 Vector3f Mesh::getVertex(unsigned int _vertNo)
 {
@@ -531,7 +526,6 @@ Vector3f Mesh::getVertex(unsigned int _vertNo)
     return vert;
 }
 
-
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
 {
   int three_i;
@@ -540,7 +534,6 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
   mat4 Rz = rotate_z_deg(identity_mat4(), _angleZ);
   vec4 vertex;
   vertex.v[3] = 1.0;
-
 
   for(unsigned int i=0; i<m_vertCount; ++i)
   {
@@ -564,7 +557,6 @@ void Mesh::moveObject(float _tX, float _tY, float _tZ)
   vec4 vertex;
   vertex.v[3] = 1.0;
 
-
   for(unsigned int i=0; i<m_vertCount; ++i)
   {
      three_i = 3*i;
@@ -582,9 +574,7 @@ void Mesh::moveObject(float _tX, float _tY, float _tZ)
 
 int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vector3f _origin, Vector3f _ray)
 {
-    //References
-    //Fast, Minimum Storage Ray/Triangle Intersection, Möller & Trumbore. Journal of Graphics Tools, 1997.
-
+ ///@ref Fast, Minimum Storage Ray/Triangle Intersection, Möller & Trumbore. Journal of Graphics Tools, 1997.
     Vector3f point1, point2, point3;
     Vector3f edge1, edge2;
     Vector3f P, Q, T;
@@ -715,7 +705,6 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
  return -1;
 }
 
-
 void Mesh::affineTransformation(MatrixXf _X)
 {
     unsigned int three_i;
@@ -739,12 +728,11 @@ void Mesh::affineTransformation(MatrixXf _X)
 
 }
 
-
 float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
-  {
-      float diff1 = _v1[0] - _v2[0];
-      float diff2 = _v1[1] - _v2[1];
-      float diff3 = _v1[2] - _v2[2];
+{
+ float diff1 = _v1[0] - _v2[0];
+ float diff2 = _v1[1] - _v2[1];
+ float diff3 = _v1[2] - _v2[2];
 
-      return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
-  }
+ return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+}
