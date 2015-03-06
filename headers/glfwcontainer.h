@@ -103,6 +103,12 @@ class GLFWContainer
     void setClickActiveMeshIndex(unsigned int _click) { m_clickActiveMeshIndex = _click; }
     unsigned int getClickActiveMeshIndex() { return m_clickActiveMeshIndex; }
     Mesh* getClickActiveMesh() { return m_mesh[m_clickActiveMeshIndex]; }
+    bool getWireframe() {  return m_mesh[m_clickActiveMeshIndex]->getWireframe(); }
+    void setWireframe(bool _value)
+    {
+        //TO DO: Temporary solution, works for 2 meshes only!
+        m_mesh[m_clickActiveMeshIndex]->setWireframe(_value);
+    }
 };
 
 #endif // MYGLFWWINDOW_H

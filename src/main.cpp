@@ -5,6 +5,7 @@ Use valgrind --leak-check=full to check for memory leaks.
 
 /// @author Anamaria Ciucanu
 /// @date January - March 2015
+/// @version 1.0
 /// @brief
 /// This is the implementation of [52] Amberg et. al (2007) Nonrigid Iterative Closest Point Algorithm with the following contributions:
 /// (...)
@@ -82,6 +83,10 @@ void mouseClickEvent(GLFWwindow *_window, int _button, int _action, int _mods)
    glfwGetCursorPos(_window, &xpos, &ypos);
    calculateClickRay(xpos, ypos);
   }
+   if(_button == GLFW_MOUSE_BUTTON_2 && _action == GLFW_PRESS)
+   {
+    glfw_container->setWireframe(!glfw_container->getWireframe());
+   }
 }
 
 

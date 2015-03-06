@@ -21,6 +21,7 @@ Mesh::Mesh()
     m_texCoordCount = 0;
     m_landmarkVertexIndices = new std::vector<int>();
     m_pickedIndex = -1;
+    m_wireframe = false;
 }
 
 Mesh::~Mesh()

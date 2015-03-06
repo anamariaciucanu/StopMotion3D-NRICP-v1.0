@@ -77,7 +77,8 @@ class Mesh
     std::vector<int>* m_landmarkVertexIndices;
  ///@brief Integer variable representing the currently picked vertex index
     int m_pickedIndex;
-
+///@brief Boolean value saying whether or not the mesh should be displayed in wireframe
+    bool m_wireframe;
 
  public:
  ///@brief ctor for Mesh class
@@ -170,5 +171,8 @@ class Mesh
     {
      m_pickedIndex = _index;
     }
+
+    void setWireframe(bool _value){ m_wireframe = _value; }
+    bool getWireframe(){ return m_wireframe; }
 };
 #endif // MESH_H

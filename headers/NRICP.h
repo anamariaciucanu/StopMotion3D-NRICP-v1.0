@@ -56,6 +56,10 @@ class NRICP
     std::vector<std::pair<unsigned int, unsigned int> >* m_landmarkCorrespondences;
  ///@brief Boolean value determining whether the landmark correspondences vector has been modified
     bool m_landmarkCorrespChanged;
+ ///@brief Boolean value that says whether the stiffness has changed
+    bool m_stiffnessChanged;
+ ///@brief Checks to see if the NRICP has started
+    bool m_nricpStarted;
  ///@brief Pointer to a dynamic integer vector -> weights of target correspondences
     VectorXi* m_W;
  ///@brief Pointer to sparse matrix of floats -> the template vertex information in an n x 4n matrix
@@ -100,18 +104,22 @@ class NRICP
     void destroyPartitions(SpherePartition *_partition);
     ///@brief asks the template mesh to build the vertex matrix, m_D
     void buildVertexMatrix();
-    ///@brief performs an ICP transformation on the template, to bring it closer to the target mesh
-    void calculateRigidTransformation();
     ///@brief performs an NRICP transformation on the template, to morph it closer to the target mesh
     void calculateNonRigidTransformation();
+    ///@brief performs a hybrid ICP transformation on the template, to morph it closer to the target mesh
+    void calculateRigidTransformation();
     ///@brief finds the closest target vertex to the template vertex, from a restrained group of target vertices
     ///@param [in] _templateIndex Unsigned integer -> the index of the template vertex
     ///@param [in] _targetStart, _targetEnd Unsigned integers -> the start and end vertex indices on the target mesh
     void findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
     ///@brief Fills in m_U with target correspondences for every template vertex
     void findCorrespondences();
-    ///@brief Finds m_X transformation matrix for the template mesh
-    void determineOptimalDeformation();
+    ///@brief Finds m_X transformation matrix for the template mesh for ICP
+    void determineRigidOptimalDeformation();
+    ///@brief Finds m_X transformation matrix for the template mesh for NRICP
+    void determineNonRigidOptimalDeformation();
+    ///@brief Solves AX=B
+    void solveLinearSystem();
     ///@brief Deforms the template using the m_X matrix generated from the previous step
     void deformTemplate();
     ///@brief Adds a landmark template-target vertex correspondence to the list
@@ -127,6 +135,7 @@ class NRICP
       {
           m_stiffness = 1.0;
       }
+      m_stiffnessChanged = true;
     }
     ///@brief Modifies beta by a certain value
     ///@param [in] _value Float variable by which beta is modified
@@ -153,7 +162,8 @@ class NRICP
     void setTemplateAuxIndex(int _value){ m_templateAuxIndex = _value; }
     int getTemplateAuxIndex(){ return m_templateAuxIndex; }
     void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
-    float getStiffness() { return m_stiffness;}
+    void setNRICPStarted(bool _value) { m_nricpStarted = _value; }
+    float getStiffness() { return m_stiffness; }
     Mesh* getTemplate(){ return m_template; }
     Mesh* getTarget() { return m_target; }
 };

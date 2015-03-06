@@ -10,7 +10,7 @@ uniform vec3 col_picked_vert;
 uniform int picked_indices_count;
 uniform int chosen_index;
 uniform int picked_index;
-uniform int picked_indices[50]; //TO DO: Harcoded number of verts, not so great - correct that
+uniform int picked_indices[100]; //TO DO: Harcoded number of verts, not so great - correct that
 out vec3 position_eye, normal_eye, col_choice_frag;
 
 

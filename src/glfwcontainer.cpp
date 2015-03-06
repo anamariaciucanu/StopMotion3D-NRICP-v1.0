@@ -150,12 +150,12 @@ void GLFWContainer::checkKeyPress()
 
     //control keys
     if(glfwGetKey(m_window, GLFW_KEY_A)){
-      m_camera->translate(0, -m_camera->getSpeed() * elapsed_seconds);
+      m_camera->translate(0, m_camera->getSpeed() * elapsed_seconds);
       m_camera->setMoved(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_D)){
-      m_camera->translate(0, m_camera->getSpeed() * elapsed_seconds);
+      m_camera->translate(0, -m_camera->getSpeed() * elapsed_seconds);
       m_camera->setMoved(true);
     }
 
@@ -178,11 +178,11 @@ void GLFWContainer::checkKeyPress()
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_F)){
-     m_objYRot += 0.05;
+     m_objYRot -= 0.05;
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_G)){
-     m_objYRot -= 0.05;
+     m_objYRot += 0.05;
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_V)){
@@ -227,6 +227,7 @@ void GLFWContainer::checkKeyPress()
      //m_mesh[0]->calculateNormals();
      m_nrICP->getTemplate()->bindVAO1();
      m_nrICP->modifyStiffness(-1.0);
+     m_nrICP->modifyBeta(-0.001);
      sleep(1.0);
     }
 
@@ -265,12 +266,12 @@ void GLFWContainer::initializeDrawing()
     //loadMesh("../models/Cube1.obj", transformations);
     transformations[3] = 0.7;
     loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
-    //loadMesh("../models/Cube2.obj", transformations);
+    //loadMesh("../models/Creature.obj", transformations);
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
 
-    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+   loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
     //Transformations =========================================================================
     //Model matrix
@@ -347,18 +348,30 @@ void GLFWContainer::loopDrawing()
       m_shader->sendVertexIndicesToShader(m_mesh[0]->getPickedVertexIndex(), m_mesh[0]->getLandmarkVertexIndices());
       glUseProgram(m_shader->getShaderProgramme());
       glBindVertexArray(m_mesh[0]->getVAO1());
-      glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      //glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      if(m_mesh[0]->getWireframe())
+      {
+       glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      }
+      else
+      {
+       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      }
 
    //Draw mesh 2 =================================target===============================================
       m_shader->sendColourChoiceToShader(col2);
       m_shader->sendChosenIndexToShader(m_nrICP->getTargetAuxIndex());
       m_shader->sendVertexIndicesToShader(m_mesh[1]->getPickedVertexIndex(), m_mesh[1]->getLandmarkVertexIndices());
       glBindVertexArray(m_mesh[1]->getVAO1());
-      //glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      glDrawElements(GL_LINES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      if(m_mesh[1]->getWireframe())
+      {
+       glDrawElements(GL_LINE_STRIP, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      }
+      else
+      {
+       glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      }
 
     //Draw normals of template mesh ======================= template normals ===========================
 //      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
@@ -405,7 +418,7 @@ void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _target
 
     string line1, line2;
     int l1, l2;
-    while (getline(in1, line1), getline(in2, line2))
+    while (getline(in1, line1) && getline(in2, line2))
     {
      istringstream s1(line1);
      istringstream s2(line2);
