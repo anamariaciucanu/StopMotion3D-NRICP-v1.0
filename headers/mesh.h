@@ -64,6 +64,8 @@ class Mesh
     std::map <std::pair<unsigned int, unsigned int>, short >* m_adjMat;
  ///@brief Pointer to a Sparse Matrix of GLfloats, from the Eigen library -> contains the vertex floats in a n x 4n matrix (n = m_vertCount)
     SparseMatrix<GLfloat>* m_D;
+ ///@brief Neighbour list
+    std::vector<std::vector<int> >* m_neighbours;
  ///@brief GLuint addresses for vertex buffer objects -> vertex position, face indices, normals, texture coordinates
     GLuint m_vbo1Position;
     GLuint m_vbo1Indices;
@@ -106,8 +108,9 @@ class Mesh
     void buildVertexMatrix();
  ///@brief creates the normal lines vector, m_vertNormalLines
     void buildVertexNormalVector();
+ ///@brief creates the neighbour list
+    void buildNeighbourList();
  ///@brief checks intersection of a ray with the mesh
- ///
  ///@param [in] _culling -> boolean variable indicating whether culling is neccessary when checking for intersection
  ///@param [in] _originTemplateIndex -> integer represting the template starting vertex index, if intersection is required from an origin on the template
  ///@param[in] _origin -> vector of size 3 representing the position of the origin of the ray
@@ -138,6 +141,12 @@ class Mesh
 ///@brief Euclidean distance between two vertices
 ///@param [in] _v1, _v2 first and second vertices
     float euclideanDistance(Vector3f _v1, Vector3f _v2);
+///@brief Calculates and returnes the Gaussian curvature of a vertex
+///@param [in] _index  the index of the vertex whose curvature we are calculating
+    float calculateVertexCurvature(int _index);
+///@brief finds the third vertex of the triangle, from the list of the first vetrex's neighbours
+///@param [in] _v1, _v2 first 2 vertices of the triangle
+    int findThirdVertex(int _v1, int _v2);
 
 /// Setters and Getters of the private members
     std::vector<GLfloat>* getVertices(){ return m_vertices; }

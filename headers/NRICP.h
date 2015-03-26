@@ -74,18 +74,9 @@ class NRICP
     SparseMatrix<GLfloat>* m_A;
  ///@brief Pointer to a sparse matrix of floats -> m_B matrix from NRICP, used to determine m_X
     SparseMatrix<GLfloat>* m_B;
- ///@brief Pointer to dynamic float matrix -> m_Xicp tranformation matrix from ICP algorithm
-    MatrixXf* m_Xicp;
- ///@brief Pointer to sparse matrix of floats -> m_Dicp, vertex information matrix, from ICP
-    SparseMatrix<GLfloat>* m_Dicp;
- ///@brief Pointer to sparse matrix of floats -> m_Uicp, correspondence information matrix,from ICP
-    SparseMatrix<GLfloat>* m_Uicp;
  ///@brief Output file reader
     ofstream myfile;
- ///@brief Unsigned integer -> Experiment variable, used to represent the selected target vertex by the NRICP algorithm
-    unsigned int m_targetAuxIndex;
- ///@brief Unsigned integer -> Experiment variable, used to represent the template vertex under observation
-    unsigned int m_templateAuxIndex;
+
 
  public:
     ///@brief ctor of NRICP class object
@@ -94,6 +85,8 @@ class NRICP
     NRICP(Mesh* _template,  Mesh* _target);    
     ///@brief dtor of NRICP class object
     ~NRICP();
+    ///@brief initializes elements needed before the algorithm starts
+    void initializeNRICP();
     ///@brief creates sphere hierarchy partitions
     ///@param [in] _start, _end Unsigned integers -> the start and end indices of a partition
     ///@param [in] _partition -> the parent partition for the new hierarchy member to be created
@@ -157,14 +150,12 @@ class NRICP
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
 
     /// Setters and Getters for the private members
-    void setTargetAuxIndex(int _value){ m_targetAuxIndex = _value; }
-    int getTargetAuxIndex(){ return m_targetAuxIndex; }
-    void setTemplateAuxIndex(int _value){ m_templateAuxIndex = _value; }
-    int getTemplateAuxIndex(){ return m_templateAuxIndex; }
     void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
     void setNRICPStarted(bool _value) { m_nricpStarted = _value; }
     float getStiffness() { return m_stiffness; }
+    void setTemplate(Mesh* _template){ m_template = _template; }
     Mesh* getTemplate(){ return m_template; }
+    void setTarget(Mesh* _target){ m_target = _target; }
     Mesh* getTarget() { return m_target; }
 };
 #endif // NRICP_H

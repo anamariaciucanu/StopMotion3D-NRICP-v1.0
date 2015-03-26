@@ -270,8 +270,12 @@ void GLFWContainer::initializeDrawing()
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+    m_nrICP->initializeNRICP();
 
    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+
+   Segmentation segmetnation1(m_mesh[0]);
+   segmetnation1.segment();
 
     //Transformations =========================================================================
     //Model matrix
@@ -344,7 +348,6 @@ void GLFWContainer::loopDrawing()
 
    //Draw mesh 1 ===============================template==============================================
       m_shader->sendColourChoiceToShader(col1);
-      m_shader->sendChosenIndexToShader(m_nrICP->getTemplateAuxIndex());
       m_shader->sendVertexIndicesToShader(m_mesh[0]->getPickedVertexIndex(), m_mesh[0]->getLandmarkVertexIndices());
       glUseProgram(m_shader->getShaderProgramme());
       glBindVertexArray(m_mesh[0]->getVAO1());
@@ -360,7 +363,6 @@ void GLFWContainer::loopDrawing()
 
    //Draw mesh 2 =================================target===============================================
       m_shader->sendColourChoiceToShader(col2);
-      m_shader->sendChosenIndexToShader(m_nrICP->getTargetAuxIndex());
       m_shader->sendVertexIndicesToShader(m_mesh[1]->getPickedVertexIndex(), m_mesh[1]->getLandmarkVertexIndices());
       glBindVertexArray(m_mesh[1]->getVAO1());
       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);

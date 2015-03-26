@@ -12,7 +12,8 @@ SOURCES+= src/main.cpp \
     src/glfwcontainer.cpp \
     src/shader.cpp \
     src/mesh.cpp \
-    src/NRICP.cpp
+    src/NRICP.cpp \
+    src/segmentation.cpp
 
 HEADERS+= headers/matrix.h \
     headers/logger.h \
@@ -21,7 +22,8 @@ HEADERS+= headers/matrix.h \
     headers/camera.h \
     headers/shader.h \
     headers/mesh.h \
-    headers/NRICP.h
+    headers/NRICP.h \
+    headers/segmentation.h
 
 INCLUDEPATH +=./headers
 

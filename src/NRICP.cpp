@@ -5,122 +5,86 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
     m_target = _target;
-    m_stiffness = 10.0;
     m_beta = 1.0;
     m_epsilon = 4.0;
     m_gamma = 1.0;
-    m_templateVertCount = m_template->getVertCount();
-    m_targetVertCount = m_target->getVertCount();
-    m_targetAuxIndex = -1;
-    m_templateAuxIndex = 35;
-    m_landmarkCorrespondenceCount = 0;
 
-// Defining adjMat
-    m_adjMat = m_template->getAdjMat();
-    if(!m_adjMat)
-    {
-      m_template->buildArcNodeMatrix();
-      m_adjMat = m_template->getAdjMat();
-    }
-
-// Defining landmarks
-    m_landmarkCorrespondences = new std::vector<std::pair<unsigned int, unsigned int> >();
-    m_landmarkCorrespChanged = false;
-
-// Defining
-    m_W = new VectorXi(m_templateVertCount);
-    m_W->setOnes(m_templateVertCount);
-
-// Defining D
-    m_D = m_template->getD();
-    if(!m_D)
-    {
-        m_template->buildVertexMatrix();
-        m_D = m_template->getD();
-    }
-
-// Defining U
-    m_U = new MatrixXf(m_templateVertCount, 3);
-    m_U->setZero(m_templateVertCount, 3);
-
-// Defining X and X_prev
-    m_X = new MatrixXf(4 * m_templateVertCount, 3);
-    m_X->setZero(4 * m_templateVertCount, 3);
-
-// Defining Sphere Partitions
-   m_targetPartition = createPartitions(0, m_targetVertCount-1, m_targetPartition);
-
-//Sparse matrices A and B
-//Landmarks not included here
-   m_templateEdgeCount = m_template->getEdgeCount();
-   m_A = new  SparseMatrix<GLfloat> (4 * m_templateEdgeCount, 4 * m_templateVertCount);
-   m_B = new  SparseMatrix<GLfloat> (4 * m_templateEdgeCount, 3);
-
-   m_stiffnessChanged = true;
-   m_nricpStarted = false;
+    m_W = new VectorXi();
+    m_U = new MatrixXf();
+    m_X = new MatrixXf();
+    m_A = new SparseMatrix<GLfloat>();
+    m_B = new SparseMatrix<GLfloat>();
 
 //Aux
    //myfile.open("../logs/times6.txt");
 }
 
+void NRICP::initializeNRICP()
+{
+    m_templateVertCount = m_template->getVertCount();
+    m_targetVertCount = m_target->getVertCount();
+    m_stiffness = 10.0;
+    m_landmarkCorrespondenceCount = 0;
+    m_stiffnessChanged = true;
+    m_nricpStarted = false;
+
+    // Defining adjMat
+        m_adjMat = m_template->getAdjMat();
+        if(!m_adjMat)
+        {
+          m_template->buildArcNodeMatrix();
+          m_adjMat = m_template->getAdjMat();
+        }
+
+    // Defining landmarks
+        m_landmarkCorrespondences = new std::vector<std::pair<unsigned int, unsigned int> >();
+        m_landmarkCorrespChanged = false;
+
+    // Defining W
+        m_W ->resize(m_templateVertCount);
+        m_W->setOnes(m_templateVertCount);
+
+    // Defining D
+        m_D = m_template->getD();
+        if(!m_D)
+        {
+            m_template->buildVertexMatrix();
+            m_D = m_template->getD();
+        }
+
+    // Defining U
+        m_U->resize(m_templateVertCount, 3);
+        m_U->setZero(m_templateVertCount, 3);
+
+    // Defining X
+        m_X->resize(4 * m_templateVertCount, 3);
+        m_X->setZero(4 * m_templateVertCount, 3);
+
+    // Defining Sphere Partitions
+       m_targetPartition = createPartitions(0, m_targetVertCount-1, m_targetPartition);
+
+    //Sparse matrices A and B
+    //Landmarks not included here
+       m_templateEdgeCount = m_template->getEdgeCount();
+       m_A->resize(4 * m_templateEdgeCount, 4 * m_templateVertCount);
+       m_B->resize(4 * m_templateEdgeCount, 3);
+}
+
+
 NRICP::~NRICP()
 {
-    if(m_adjMat)
-    {
-     delete m_adjMat;
-    }
-
     if(m_landmarkCorrespondences)
     {
-     delete m_landmarkCorrespondences;
+     delete [] m_landmarkCorrespondences;
     }
 
-    if(m_D)
-    {
-     delete m_D;
-    }
-
-    if(m_W)
-    {
-     delete m_W;
-    }
-
-    if(m_U)
-    {
-     delete m_U;
-    }
-
-    if(m_X)
-    {
-     delete m_X;
-    }
+    m_W->resize(0, 0);
+    m_U->resize(0, 0);
+    m_X->resize(0, 0);
+    m_A->resize(0, 0);
+    m_B->resize(0, 0);
 
     destroyPartitions(m_targetPartition);
-
-    if(m_A)
-    {
-     delete m_A;
-    }
-
-    if(m_B)
-    {
-     delete m_B;
-    }
-
-    if(m_Uicp)
-    {
-     delete m_Uicp;
-    }
-
-    if(m_Dicp)
-    {
-     delete m_Dicp;
-    }
-
-    if(m_Xicp)
-    {
-     delete m_Xicp;
-    }
 
   //  myfile.close();
 }
@@ -131,6 +95,7 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
 
 
     //Observation: This assumes vertex data is in order
+     //destroyPartitions(m_targetPartition);
     _partition = new SpherePartition();
     _partition->start = _start;
     _partition->end = _end;
@@ -227,30 +192,26 @@ void NRICP::calculateNonRigidTransformation()
    m_nricpStarted = true;
 
    float previous_seconds = glfwGetTime();
- //  float alpha = 10.0;
 
-  // for(m_stiffness = alpha; m_stiffness > 1.0; m_stiffness = m_stiffness - 1.0)
-  // {
-     MatrixXf* X_prev = new MatrixXf(4 * m_templateVertCount, 3);
-     X_prev->setZero(4 * m_templateVertCount, 3);
-     m_stiffnessChanged = true;
+   MatrixXf* X_prev = new MatrixXf(4 * m_templateVertCount, 3);
+   X_prev->setZero(4 * m_templateVertCount, 3);
+   m_stiffnessChanged = true;
 
-     findCorrespondences();
-     determineNonRigidOptimalDeformation();
-     deformTemplate();
-     float changes = normedDifference(X_prev, m_X);
+   findCorrespondences();
+   determineNonRigidOptimalDeformation();
+   deformTemplate();
+   float changes = normedDifference(X_prev, m_X);
 
-      while (changes > m_epsilon)
-      {
-       (*X_prev) = (*m_X);
-       findCorrespondences();
-       determineNonRigidOptimalDeformation();
-       deformTemplate();
-       changes = normedDifference(X_prev, m_X);
-      }
+   while (changes > m_epsilon)
+   {
+    (*X_prev) = (*m_X);
+    findCorrespondences();
+    determineNonRigidOptimalDeformation();
+    deformTemplate();
+    changes = normedDifference(X_prev, m_X);
+   }
 
-      delete X_prev;
-  // }
+   delete X_prev;
 
    float current_seconds = glfwGetTime();
    float elapsed_seconds = current_seconds - previous_seconds;
@@ -282,7 +243,6 @@ void NRICP::findCorrespondences()
       float distance_left = 0.0;
       float distance_right = 0.0;
       unsigned int three_i;
-      m_targetAuxIndex = -1;
       m_W->setOnes();
       m_U->setZero();
 
@@ -358,7 +318,6 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
       float minDistance = 1000.0;
       bool foundCorrespondence = false;
       Vector3f auxUi(0.0, 0.0, 0.0);
-      unsigned int targetIndex = 0;
       unsigned int three_j;
 
       templateVertex[0] = vertsTemplate->at(_templateIndex * 3);
@@ -379,7 +338,6 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
          auxUi[1] = targetVertex[1];
          auxUi[2] = targetVertex[2];
          minDistance = distance;
-         targetIndex = j;
          foundCorrespondence = true;
         }
        }
@@ -399,21 +357,11 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
             (*m_U)(_templateIndex, 0) = auxUi[0];
             (*m_U)(_templateIndex, 1) = auxUi[1];
             (*m_U)(_templateIndex, 2) = auxUi[2];
-
-            //Found correspondence => paint correspondence vertex green
-            if(_templateIndex == m_templateAuxIndex)
-             {
-              m_targetAuxIndex = targetIndex;
-             }
-             else
-             {
-              m_targetAuxIndex = -1;
-             }
-            }
+          }
           else
-            {
-             (*m_W)(_templateIndex) = 0.0;
-            }
+          {
+           (*m_W)(_templateIndex) = 0.0;
+          }
         }
         else
         {
@@ -472,7 +420,6 @@ void NRICP::determineRigidOptimalDeformation()
         }
 
   //Beta * Dl and Ul
-
         for(unsigned int i = 0; i < sizeRowsDl; ++i)
         {
          unsigned int l1 = m_landmarkCorrespondences->at(i).first;
@@ -549,7 +496,6 @@ void NRICP::determineNonRigidOptimalDeformation()
    }
 
  //W * D
-
     for(unsigned int i = 0; i < m_templateVertCount; ++i)
     {
      auxRowIndex = i + sizeRowsMG;

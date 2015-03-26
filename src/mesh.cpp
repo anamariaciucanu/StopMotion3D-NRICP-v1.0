@@ -19,9 +19,9 @@ Mesh::Mesh()
     m_edgeCount = 0;
     m_faceCount = 0;
     m_texCoordCount = 0;
-    m_landmarkVertexIndices = new std::vector<int>();
     m_pickedIndex = -1;
     m_wireframe = false;
+    m_landmarkVertexIndices = new std::vector<int>();
 }
 
 Mesh::~Mesh()
@@ -53,12 +53,17 @@ Mesh::~Mesh()
 
  if(m_adjMat)
  {
-   delete m_adjMat;
+   delete [] m_adjMat;
  }
 
  if(m_D)
  {
    delete m_D;
+ }
+
+ if(m_neighbours)
+ {
+   delete [] m_neighbours;
  }
 
  if(m_landmarkVertexIndices)
@@ -501,6 +506,34 @@ void Mesh::buildVertexMatrix()
   m_D->makeCompressed();
 }
 
+void Mesh::buildNeighbourList()
+{
+ if(m_adjMat)
+ {
+  int v1, v2;
+
+  if(m_neighbours)
+  {
+    delete [] m_neighbours;
+  }
+  m_neighbours = new std::vector<std::vector<int> >(m_vertCount);
+
+  for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+  {
+      v1 = it->first.first;
+      v2 = it->first.second;
+
+      m_neighbours->at(v1).push_back(v2);
+      m_neighbours->at(v2).push_back(v1);
+  }
+ }
+ else
+ {
+  buildArcNodeMatrix();
+  buildNeighbourList();
+ }
+}
+
 Vector3f Mesh::getNormal(unsigned int _vertNo)
 {
     Vector3f normal(0.0, 0.0, 0.0);
@@ -525,6 +558,87 @@ Vector3f Mesh::getVertex(unsigned int _vertNo)
      vert[2] = m_vertices->at(_vertNo * 3 + 2);
     }
     return vert;
+}
+
+float Mesh::calculateVertexCurvature(int _index)
+{
+
+    float curvature = -10000;
+    unsigned int triangle[3];
+    unsigned int noNeighbours = 0;
+    float angleSum = 0.0;
+    float areaSum = 0.0;
+
+    triangle[0] = _index;
+    std::vector<int> neighbours = m_neighbours->at(_index);
+    noNeighbours = neighbours.size();
+
+    for(unsigned int i=0; i<noNeighbours; ++i)
+    {
+     triangle[1] = neighbours[i];
+     triangle[2] = findThirdVertex(triangle[0], triangle[1]);
+
+     if(triangle[2] < 0)
+     {
+      //isolated edge - use information somewhere
+     }
+     else
+     {
+      //we know the 3 indices of the traingle
+      //calculate index angle and triangle area
+       Vector3f v1 = getVertex(triangle[0]);
+       Vector3f v2 = getVertex(triangle[1]);
+       Vector3f v3 = getVertex(triangle[2]);
+
+       //Law of cosines
+       float a = euclideanDistance(v1, v2);
+       float b = euclideanDistance(v1, v3);
+       float c = euclideanDistance(v2, v3);
+       float s = (a+b+c)/2;
+
+       angleSum += acos((a*a + b*b - c*c)/2*a*b);
+       areaSum += sqrt(s*(s-a)*(s-b)*(s-c));
+      }
+     }
+     curvature = (2 * 3.14159 - angleSum)/(areaSum/3.0);
+
+    return curvature;
+}
+
+int Mesh::findThirdVertex(int _v1, int _v2)
+{
+  std::vector<int> neighbours_v1 = m_neighbours->at(_v1);
+  std::vector<int> neighbours_v2 = m_neighbours->at(_v2);
+  unsigned int size_v1 = neighbours_v1.size();
+  unsigned int size_v2 = neighbours_v2.size();
+  int aux_v3;
+  int v3 = -1;
+  unsigned int i=0;
+  bool found = false;
+
+  while (i < size_v1 && !found)
+  {
+      aux_v3 = neighbours_v1[i];
+
+      if(aux_v3 != _v2)
+      {
+          //Look for vertex in v2 neighbour list
+          unsigned int j = 0;
+          while(j < size_v2 && !found)
+          {
+              if(neighbours_v2[j] == aux_v3)
+              {
+                  found = true;
+                  v3 = aux_v3;
+              }
+              ++j;
+          }
+      }
+
+      ++i;
+  }
+
+  return v3;
 }
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)

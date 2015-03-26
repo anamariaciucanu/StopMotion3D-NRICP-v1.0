@@ -14,6 +14,7 @@
 #include "camera.h"
 #include "shader.h"
 #include "NRICP.h"
+#include "segmentation.h"
 
 using namespace std;
 
