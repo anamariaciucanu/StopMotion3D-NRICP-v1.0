@@ -183,5 +183,6 @@ class Mesh
 
     void setWireframe(bool _value){ m_wireframe = _value; }
     bool getWireframe(){ return m_wireframe; }
+    std::vector<int> getNeighbours(int _index) { return m_neighbours->at(_index); }
 };
 #endif // MESH_H

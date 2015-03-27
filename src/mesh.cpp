@@ -193,7 +193,7 @@ void Mesh::printLandmarkedPoints(const char*_fileName)
 {
   ofstream file;
   file.open(_fileName);
-  int size = m_landmarkVertexIndices->size();
+  unsigned int size = m_landmarkVertexIndices->size();
 
   for(unsigned int i=0; i<size; ++i)
   {
@@ -564,7 +564,7 @@ float Mesh::calculateVertexCurvature(int _index)
 {
 
     float curvature = -10000;
-    unsigned int triangle[3];
+    int triangle[3];
     unsigned int noNeighbours = 0;
     float angleSum = 0.0;
     float areaSum = 0.0;
@@ -595,8 +595,9 @@ float Mesh::calculateVertexCurvature(int _index)
        float b = euclideanDistance(v1, v3);
        float c = euclideanDistance(v2, v3);
        float s = (a+b+c)/2;
-
-       angleSum += acos((a*a + b*b - c*c)/2*a*b);
+       float cosine = (a*a + b*b - c*c)/(2*a*b);
+       float angle = acos(cosine);
+       angleSum += angle;
        areaSum += sqrt(s*(s-a)*(s-b)*(s-c));
       }
      }
