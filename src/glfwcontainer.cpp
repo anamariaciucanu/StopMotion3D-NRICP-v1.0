@@ -262,20 +262,20 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
      float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
-    loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
-    //loadMesh("../models/Cube1.obj", transformations);
-    transformations[3] = 0.7;
-    loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
+     loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
+    //loadMesh("../models/Rob_Obj_TPose.obj", transformations);
+    //transformations[3] = 0.7;
+    //loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
     //loadMesh("../models/Creature.obj", transformations);
 
     //Nonrigid Iterative Closest Point ========================================================
-    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-    m_nrICP->initializeNRICP();
+   //m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+    //m_nrICP->initializeNRICP();
 
-   loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+  // loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
-   Segmentation segmetnation1(m_mesh[0]);
-   segmetnation1.segment();
+   m_segmentation = new Segmentation(m_mesh[0]);
+   m_segmentation->segment();
 
     //Transformations =========================================================================
     //Model matrix
@@ -310,6 +310,7 @@ void GLFWContainer::loopDrawing()
     m_camera->setMoved(false);
     vec3 col1 = vec3(0.9, 0.6, 0.3);
     vec3 col2 = vec3(0.3, 0.6, 0.9);
+    vec3 col3 = vec3(0.5, 0.5, 0.5);
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -348,22 +349,22 @@ void GLFWContainer::loopDrawing()
 
    //Draw mesh 1 ===============================template==============================================
       m_shader->sendColourChoiceToShader(col1);
-      m_shader->sendVertexIndicesToShader(m_mesh[0]->getPickedVertexIndex(), m_mesh[0]->getLandmarkVertexIndices());
+     // m_shader->sendVertexIndicesToShader(m_mesh[0]->getPickedVertexIndex(), m_mesh[0]->getLandmarkVertexIndices());
       glUseProgram(m_shader->getShaderProgramme());
       glBindVertexArray(m_mesh[0]->getVAO1());
       glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      if(m_mesh[0]->getWireframe())
+     // if(m_mesh[0]->getWireframe())
       {
-       glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      // glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       }
-      else
+    //  else
       {
-       glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+     //  glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       }
-
+  /*
    //Draw mesh 2 =================================target===============================================
       m_shader->sendColourChoiceToShader(col2);
-      m_shader->sendVertexIndicesToShader(m_mesh[1]->getPickedVertexIndex(), m_mesh[1]->getLandmarkVertexIndices());
+    //  m_shader->sendVertexIndicesToShader(m_mesh[1]->getPickedVertexIndex(), m_mesh[1]->getLandmarkVertexIndices());
       glBindVertexArray(m_mesh[1]->getVAO1());
       glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       if(m_mesh[1]->getWireframe())
@@ -374,6 +375,23 @@ void GLFWContainer::loopDrawing()
       {
        glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
       }
+
+*/
+   //Draw segments ===============================mesh 0 ================================
+   unsigned int size_segs = m_segmentation->getNumberOfSegments();
+
+      for(unsigned int i=0; i<size_segs; ++i)
+        {
+          col3.v[i%3] = 0.8;
+          m_shader->sendColourChoiceToShader(col3);
+          Mesh* mesh = m_segmentation->getMesh(i);
+          glBindVertexArray(mesh->getVAO1());
+          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+         col3.v[i%3] = 0.1;
+      }
+
+
+
 
     //Draw normals of template mesh ======================= template normals ===========================
 //      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
@@ -435,7 +453,7 @@ void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _target
      m_nrICP->addLandmarkCorrespondence();
     }
 
-     m_nrICP->setLandmarkCorrespChanged(true);
+    m_nrICP->setLandmarkCorrespChanged(true);
 }
 
 void GLFWContainer::printConfiguration()

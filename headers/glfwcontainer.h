@@ -36,6 +36,7 @@ class GLFWContainer
     GLFWwindow* m_window;
  ///@brief Pointer to an array of pointers to Mesh class objects
     Mesh** m_mesh;
+    Segmentation* m_segmentation;
  ///@brief Unsigned integer variable holding the number of meshes introduced in the mesh array
     unsigned int m_meshCount;
  ///@brief Unsigned integer variable determining the index from the mesh array of the currently active mesh

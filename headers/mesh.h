@@ -24,8 +24,10 @@
 #include <fstream>
 #include <string>
 
+
 using namespace Eigen;
 using namespace std;
+
 
 class Mesh
 {
@@ -153,6 +155,7 @@ class Mesh
     std::vector<GLfloat>* getNormals(){ return m_normals; }
     unsigned int getVertCount() { return m_vertCount; }
     unsigned int getFaceCount() { return m_faceCount; }
+    std::vector<GLuint>* getFaceIndices() { return m_faceIndices; }
     unsigned int getEdgeCount() { return m_edgeCount; }
     unsigned int getTexCoordCount() { return m_texCoordCount; }
     GLuint getVAO1() { return m_vao1; }
@@ -184,5 +187,30 @@ class Mesh
     void setWireframe(bool _value){ m_wireframe = _value; }
     bool getWireframe(){ return m_wireframe; }
     std::vector<int> getNeighbours(int _index) { return m_neighbours->at(_index); }
+    void appendVertex(Vector3f _vertex)
+    {
+        //Might create size problems
+        m_vertices->push_back(_vertex[0]);
+        m_vertices->push_back(_vertex[1]);
+        m_vertices->push_back(_vertex[2]);
+        m_vertCount++;
+    }
+
+    void appendNormal(Vector3f _normal)
+    {
+        //To be accompanied by appendVertex
+        m_normals->push_back(_normal[0]);
+        m_normals->push_back(_normal[1]);
+        m_normals->push_back(_normal[2]);
+    }
+
+    void appendFace(Vector3i _face)
+    {
+        m_faceIndices->push_back(_face[0]);
+        m_faceIndices->push_back(_face[1]);
+        m_faceIndices->push_back(_face[2]);
+        m_faceCount++;
+    }
+
 };
 #endif // MESH_H

@@ -852,3 +852,4 @@ float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
 
  return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
 }
+
