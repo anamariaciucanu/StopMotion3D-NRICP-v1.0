@@ -4,10 +4,11 @@
 Segmentation::Segmentation(Mesh *_originalMesh)
 {
     m_originalMesh = _originalMesh;
-    m_threshold = -20;
-    m_minVerts = 10;
+    m_threshold = -10;
+    m_minVerts = 20;
     m_vertCount = m_originalMesh->getVertCount();
     m_regions = 0;
+    m_activeSegment = 0;
     _originalMesh->buildNeighbourList();
     createVertexInfoList();
 }
@@ -37,10 +38,6 @@ void Segmentation::segment()
 
     for(unsigned int i = 0; i < m_vertCount; ++i)
     {
-
-        ofstream myfile;
-        myfile.open("../logs/K.txt");
-
         float curvature = m_originalMesh->calculateVertexCurvature(i);
         m_vertInfos[i]->curvature = curvature;
         if (curvature > m_threshold)
@@ -51,10 +48,7 @@ void Segmentation::segment()
         {
             m_vertInfos[i]->visited = true;
         }
-        myfile << curvature << "\n";
-        myfile.close();
     }
-
 
 
     //Step 3: Eliminate isolated vertices
@@ -231,13 +225,16 @@ int Segmentation::findClosestLabelledNeighbour(unsigned int _index)
 void Segmentation::createSegments()
 {
 
+    unsigned int i = 0;
+    unsigned int size;
+
+    //Obs! Regions might grow and corrupt the heap
      for (unsigned int i=0; i<m_regions; ++i)
      {
-       //Regions might grow and corrupt the heap
        m_segmentations.push_back(new std::vector<unsigned int>());
      }
 
-    //create initial segments from region algorithm results
+    //Create initial segments from region algorithm results ---------------------
      for(unsigned int j=0; j < m_vertCount; ++j)
      {
       int region = m_vertInfos[j]->region;
@@ -248,9 +245,8 @@ void Segmentation::createSegments()
       }
      }
 
-
-     //Add boundries to segments
-     unsigned int size = m_boundaryVerts.size();
+     //Add boundries to segments ------------------------------------------------
+     size = m_boundaryVerts.size();
      std::vector<unsigned int> boundaryVerts;
 
      for(unsigned int i=0; i<size; ++i)
@@ -258,7 +254,7 @@ void Segmentation::createSegments()
        boundaryVerts.push_back(m_boundaryVerts.at(i));
      }
 
-     unsigned int i = 0;
+     i = 0;
      while(size > 0 && i < size)
      {
         int index = findClosestLabelledNeighbour(boundaryVerts[i]);
@@ -278,32 +274,55 @@ void Segmentation::createSegments()
         }
      }
 
-
-     //Eliminate regions with too few vertices
+     i = 0;
+     //Eliminate regions with too few vertices -------------------------------------
      std::vector<unsigned int> reallocateVerts;
-     i=0;
-     while (i < m_segmentations.size())
+     while (i < m_regions)
      {
          std::vector<unsigned int>* segment = m_segmentations.at(i);
          unsigned int size_segs = segment->size();
-         if(size_segs < 20)
+         if(size_segs < m_minVerts)
          {
              //Reallocate vertices
              for(unsigned int j=0; j<size_segs; ++j)
              {
-              reallocateVerts.push_back(segment->at(j));
+              unsigned int vertIndex = segment->at(j);
+              m_vertInfos[vertIndex]->region = -1;
+              reallocateVerts.push_back(vertIndex);
              }
-             m_segmentations.erase(m_segmentations.begin() + i);
-             m_regions--;
-             i = 0;
          }
          i++;
+     }
+
+     i=0;     
+     while(i < m_segmentations.size())
+     {
+         if(m_segmentations.at(i)->size() < m_minVerts)
+         {
+             m_segmentations.erase(m_segmentations.begin() + i);
+             i=0;
+         }
+         else
+         {
+          i++;
+         }
+     }
+     m_regions = m_segmentations.size();
+
+     //Rename regions
+     for(unsigned int i=0; i<m_regions; ++i)
+     {
+       std::vector<unsigned int>* segment = m_segmentations.at(i);
+       size = segment->size();
+       for(unsigned int j=0; j<size; ++j)
+       {
+         m_vertInfos.at(segment->at(j))->region = i;
+       }
      }
 
 
      size = reallocateVerts.size();
      i = 0;
-
      while(size > 0 && i < size)
      {
          int index = findClosestLabelledNeighbour(reallocateVerts[i]);
@@ -351,9 +370,9 @@ void Segmentation::createSegments()
         v3 = faces->at(three_i + 2);
 
         unsigned int j = 0;
-        Vector3i newIndices;
+        Vector3i newIndices(-1, -1, -1);
         bool found = false;
-        while(!found && j<size_segs)
+        while(!found && j < size_segs)
         {
          newIndices = findFaceInSegment(v1, v2, v3, j);
 
@@ -389,13 +408,13 @@ Vector3i Segmentation::findFaceInSegment(unsigned int _v1, unsigned int _v2, uns
             items_found++;
         }
 
-        if( element == _v2)
+        else if( element == _v2)
         {
             newIndices[1] = i;
             items_found++;
         }
 
-        if (element == _v3)
+        else if (element == _v3)
         {
             newIndices[2] = i;
             items_found++;
@@ -435,3 +454,79 @@ void Segmentation::bindVAOs()
     }
 }
 
+
+void Segmentation::calculateActiveSegment(unsigned int _vertexIndex)
+{
+  Vector3f v1 = m_originalMesh->getVertex(_vertexIndex);
+
+  float minDistance = 1000.0;
+  float distance;
+  unsigned int minSegmentIndex = 0;
+  unsigned int size = m_segmentations.size();
+  unsigned int i = 0;
+
+  while (i<size)
+  {
+      m_subMeshes.at(i)->calculatePosition();
+      Vector3f segmentPosition = m_subMeshes.at(i)->getPosition();
+
+      distance = euclideanDistance(v1, segmentPosition);
+
+      if(distance < minDistance)
+      {
+          minDistance = distance;
+          minSegmentIndex = i;
+      }
+      i++;
+  }
+
+   m_activeSegment = minSegmentIndex;
+}
+
+void Segmentation::updateMeshFromSegments()
+{
+  //TO DO: Soften edges!
+  unsigned int noMeshes = m_subMeshes.size();
+
+  for(unsigned int i = 0; i < noMeshes; ++i)
+  {
+      if(m_subMeshes.at(i)->isModified())
+      {
+         Mesh* mesh_aux = m_subMeshes.at(i);
+         std::vector<unsigned int>* segment = m_segmentations.at(i);
+         unsigned int vertCount = segment->size(); //might differ from mesh size
+
+         for(unsigned int j=0; j<vertCount; ++j)
+         {
+            Vector3f changedVertex = mesh_aux->getVertex(j);
+            m_originalMesh->setVertex(segment->at(j), changedVertex);
+         }
+
+         m_subMeshes.at(i)->setModified(false);
+      }
+  }
+}
+
+
+void Segmentation::updateSegmentsFromMesh()
+{
+    if(m_originalMesh->isModified())
+    {
+       unsigned int noMeshes = m_subMeshes.size();
+
+       for(unsigned int i = 0; i < noMeshes; ++i)
+       {
+         Mesh* mesh_aux = m_subMeshes.at(i);
+         std::vector<unsigned int>* segment = m_segmentations.at(i);
+         unsigned int size = segment->size();
+
+         for(unsigned int j = 0; j < size; ++j)
+         {
+             Vector3f changedVertex = m_originalMesh->getVertex(segment->at(j));
+             mesh_aux->setVertex(j,changedVertex);
+         }
+       }
+
+       m_originalMesh->setModified(false);
+    }
+}

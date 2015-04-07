@@ -25,9 +25,10 @@ private:
   std::vector<std::vector<unsigned int>*> m_segmentations;
   std::vector<unsigned int> m_boundaryVerts;
   float m_threshold;
-  int m_minVerts;
+  unsigned int m_minVerts;
   unsigned int m_vertCount;
   unsigned int m_regions;
+  unsigned int m_activeSegment;
 
 public:
    Segmentation(Mesh* _originalMesh);
@@ -44,6 +45,11 @@ public:
    void createMeshes();
    void addVertexNormalInformation(unsigned int _index);
    void bindVAOs();
+   void calculateActiveSegment(unsigned int _vertexIndex);
+   void updateMeshFromSegments();
+   void updateSegmentsFromMesh();
+
+   ///Setters and getters
    unsigned int getNumberOfSegments()
    {
        return m_segmentations.size();
@@ -60,6 +66,21 @@ public:
     float diff3 = _v1[2] - _v2[2];
 
     return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+   }
+
+   void setActiveSegment(unsigned int _activeSegment)
+   {
+       m_activeSegment = _activeSegment;
+   }
+
+   unsigned int getActiveSegment()
+   {
+       return m_activeSegment;
+   }
+
+   Mesh* getActiveMesh()
+   {
+       return m_subMeshes.at(m_activeSegment);
    }
 };
 

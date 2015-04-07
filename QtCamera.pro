@@ -13,7 +13,8 @@ SOURCES+= src/main.cpp \
     src/shader.cpp \
     src/mesh.cpp \
     src/NRICP.cpp \
-    src/segmentation.cpp
+    src/segmentation.cpp \
+    src/linker.cpp
 
 HEADERS+= headers/matrix.h \
     headers/logger.h \
@@ -23,7 +24,8 @@ HEADERS+= headers/matrix.h \
     headers/shader.h \
     headers/mesh.h \
     headers/NRICP.h \
-    headers/segmentation.h
+    headers/segmentation.h \
+    headers/linker.h
 
 INCLUDEPATH +=./headers
 

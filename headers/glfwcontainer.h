@@ -14,7 +14,7 @@
 #include "camera.h"
 #include "shader.h"
 #include "NRICP.h"
-#include "segmentation.h"
+#include "linker.h"
 
 using namespace std;
 
@@ -36,12 +36,22 @@ class GLFWContainer
     GLFWwindow* m_window;
  ///@brief Pointer to an array of pointers to Mesh class objects
     Mesh** m_mesh;
-    Segmentation* m_segmentation;
+ ///@brief Pointer to an array of pointers to Segmentation class objects
+    Segmentation** m_segmentation;
+ ///@brief Pointer to NRICP class object, which contains the nonrigid iterative closest point algorithm implementation for
+ /// pose matching between any two meshes from the mesh array
+    NRICP* m_nrICP;
+ ///@brief Linkers between meshes and their segmentation
+    Linker** m_linker;
  ///@brief Unsigned integer variable holding the number of meshes introduced in the mesh array
     unsigned int m_meshCount;
+ ///@bief Unsigned integer variable holding the number of segmentations
+    unsigned int m_segmentationCount;
  ///@brief Unsigned integer variable determining the index from the mesh array of the currently active mesh
  /// This is used for the vertex selection method starting with the mouse click callback function from the main function
     unsigned int m_clickActiveMeshIndex;
+ ///@brief Active segment of active mesh
+    unsigned int m_clickActiveSegmentationIndex;
  ///@brief Pointer to Camera class object
     Camera* m_camera;
  ///@brief Pointer to Shader class object
@@ -50,9 +60,7 @@ class GLFWContainer
     mat4 m_modelMat;
     mat4 m_viewMat;
     mat4 m_projMat;
- ///@brief Pointer to NRICP class object, which contains the nonrigid iterative closest point algorithm implementation for
- /// pose matching between any two meshes from the mesh array
-    NRICP* m_nrICP;
+
 
  public:
  ///@brief ctor of GLFWContainer class
@@ -104,8 +112,11 @@ class GLFWContainer
     Shader* getShader() { return m_shader; }
     void setClickActiveMeshIndex(unsigned int _click) { m_clickActiveMeshIndex = _click; }
     unsigned int getClickActiveMeshIndex() { return m_clickActiveMeshIndex; }
+    void setClickActiveSegmentationIndex(unsigned int _click){ m_clickActiveSegmentationIndex = _click;}
+    unsigned int getClickActiveSegmentationIndex() { return m_clickActiveSegmentationIndex; }
     Mesh* getClickActiveMesh() { return m_mesh[m_clickActiveMeshIndex]; }
-    bool getWireframe() {  return m_mesh[m_clickActiveMeshIndex]->getWireframe(); }
+    Segmentation* getClickActiveSegmentation() { return m_segmentation[m_clickActiveSegmentationIndex]; }
+    bool getWireframe() {  return m_mesh[m_clickActiveMeshIndex]->isWireframe(); }
     void setWireframe(bool _value)
     {
         //TO DO: Temporary solution, works for 2 meshes only!

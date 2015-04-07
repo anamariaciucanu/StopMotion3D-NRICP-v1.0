@@ -51,11 +51,14 @@ void calculateClickRay(double _mouseX, double _mouseY)
     Vector3f ray = Vector3f(ray_aux.v[0], ray_aux.v[1], ray_aux.v[2]);
 
     Mesh* activeMesh =  glfw_container->getClickActiveMesh();
+    Segmentation* activeSegmentation = glfw_container->getClickActiveSegmentation();
+
     int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
 
     if(intersection >= 0)
     {
       activeMesh->setPickedVertexIndex(intersection);
+      activeSegmentation->calculateActiveSegment(intersection);
     }
 }
 

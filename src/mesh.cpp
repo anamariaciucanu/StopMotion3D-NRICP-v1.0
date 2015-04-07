@@ -12,15 +12,16 @@ Mesh::Mesh()
     m_faceIndices = new std::vector<GLuint>();
     m_adjMat = NULL;
     m_D = NULL;
-    m_position.v[0] = 0.0;
-    m_position.v[1] = 0.0;
-    m_position.v[2] = 0.0;
+    m_position[0] = 0.0;
+    m_position[1] = 0.0;
+    m_position[2] = 0.0;
     m_vertCount = 0;
     m_edgeCount = 0;
     m_faceCount = 0;
     m_texCoordCount = 0;
     m_pickedIndex = -1;
     m_wireframe = false;
+    m_modified = false;
     m_landmarkVertexIndices = new std::vector<int>();
 }
 
@@ -72,6 +73,22 @@ Mesh::~Mesh()
  }
 }
 
+void Mesh::setVertex(unsigned int _vertNo, Vector3f _value)
+{
+    unsigned int three_i = 3 * _vertNo;
+    unsigned int four_i = 4 * _vertNo;
+    m_vertices->at(three_i) = _value[0];
+    m_vertices->at(three_i + 1) = _value[1];
+    m_vertices->at(three_i + 2) = _value[2];
+
+    if(m_D)
+    {
+        m_D->coeffRef(_vertNo, four_i) = _value[0];
+        m_D->coeffRef(_vertNo, four_i + 1) = _value[1];
+        m_D->coeffRef(_vertNo, four_i + 2) = _value[2];
+    }
+}
+
 bool Mesh::loadMesh(const char *_fileName, float* _transformations)
 {    
     ifstream in(_fileName, ios::in);
@@ -81,9 +98,9 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
      return false;
     }
 
-    m_position.v[0] = 0.0;
-    m_position.v[1] = 0.0;
-    m_position.v[2] = 0.0;
+    m_position[0] = 0.0;
+    m_position[1] = 0.0;
+    m_position[2] = 0.0;
 
     string line;
     while (getline(in, line))
@@ -100,9 +117,9 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
            m_vertices->push_back((GLfloat)vert.v[1]);
            m_vertices->push_back((GLfloat)vert.v[2]);
            m_vertCount++;
-           m_position.v[0] += (GLfloat)vert.v[0];
-           m_position.v[1] += (GLfloat)vert.v[1];
-           m_position.v[2] += (GLfloat)vert.v[2];
+           m_position[0] += (GLfloat)vert.v[0];
+           m_position[1] += (GLfloat)vert.v[1];
+           m_position[2] += (GLfloat)vert.v[2];
 
            continue;
         }
@@ -177,9 +194,9 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
 
     for(unsigned int i=0; i<m_vertCount; i++)
     {
-     m_vertices->at(3*i) = m_vertices->at(3*i) - m_position.v[0];
-     m_vertices->at(3*i+1) = m_vertices->at(3*i+1) - m_position.v[1];
-     m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position.v[2];
+     m_vertices->at(3*i) = m_vertices->at(3*i) - m_position[0];
+     m_vertices->at(3*i+1) = m_vertices->at(3*i+1) - m_position[1];
+     m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position[2];
     }
 
     moveObject(_transformations[3], _transformations[4], _transformations[5]);
@@ -512,11 +529,12 @@ void Mesh::buildNeighbourList()
  {
   int v1, v2;
 
-  if(m_neighbours)
-  {
-    delete [] m_neighbours;
-  }
+ //if(m_neighbours)
+ // {
+  //  delete [] m_neighbours;
+ // }
   m_neighbours = new std::vector<std::vector<int> >(m_vertCount);
+
 
   for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
   {
@@ -560,87 +578,84 @@ Vector3f Mesh::getVertex(unsigned int _vertNo)
     return vert;
 }
 
+bool Mesh::findInListOfNeighbours(int _neighbour1, int _neighbour2)
+{
+  std::vector<int> neighbours = m_neighbours->at(_neighbour1);
+  unsigned int size = neighbours.size();
+  bool found = false;
+
+  for(unsigned int i=0; i<size && !found; ++i)
+  {
+      if(neighbours.at(i) == _neighbour2)
+      {
+          found = true;
+      }
+  }
+
+  return found;
+}
+
 float Mesh::calculateVertexCurvature(int _index)
 {
 
     float curvature = -10000;
-    int triangle[3];
-    unsigned int noNeighbours = 0;
+    std::vector<int> neighbours = m_neighbours->at(_index);
+    unsigned int noNeighbours = neighbours.size();
+    std::vector<int> edges;
+    int neighbour1;
+    int neighbour2;
     float angleSum = 0.0;
     float areaSum = 0.0;
+    float diff = 0.0;
+    float dirac = 0.0;
 
-    triangle[0] = _index;
-    std::vector<int> neighbours = m_neighbours->at(_index);
-    noNeighbours = neighbours.size();
-
-    for(unsigned int i=0; i<noNeighbours; ++i)
+    //Create triangle list
+    for(unsigned int i = 0; i < noNeighbours - 1; ++i)
     {
-     triangle[1] = neighbours[i];
-     triangle[2] = findThirdVertex(triangle[0], triangle[1]);
+      for(unsigned int j = i+1; j < noNeighbours; ++j)
+      {
+        neighbour1 = neighbours.at(i);
+        neighbour2 = neighbours.at(j);
 
-     if(triangle[2] < 0)
-     {
-      //isolated edge - use information somewhere
-     }
-     else
-     {
+        if(findInListOfNeighbours(neighbour1, neighbour2))
+        {
+         //Found neighbour2 in list of neighbours of neighbour1
+          edges.push_back(neighbour1);
+          edges.push_back(neighbour2);
+        }
+      }
+    }
+
       //we know the 3 indices of the traingle
       //calculate index angle and triangle area
-       Vector3f v1 = getVertex(triangle[0]);
-       Vector3f v2 = getVertex(triangle[1]);
-       Vector3f v3 = getVertex(triangle[2]);
+      Vector3f v1 = getVertex(_index);
+      unsigned int i = 0;
 
-       //Law of cosines
-       float a = euclideanDistance(v1, v2);
-       float b = euclideanDistance(v1, v3);
-       float c = euclideanDistance(v2, v3);
-       float s = (a+b+c)/2;
-       float cosine = (a*a + b*b - c*c)/(2*a*b);
-       float angle = acos(cosine);
-       angleSum += angle;
-       areaSum += sqrt(s*(s-a)*(s-b)*(s-c));
-      }
-     }
-     curvature = (2 * 3.14159 - angleSum)/(areaSum/3.0);
+      while(i < edges.size())
+       {
+           Vector3f v2 = getVertex(edges.at(i));
+           Vector3f v3 = getVertex(edges.at(i+1));
 
-    return curvature;
+           //Dirac delta
+           diff = euclideanDistance(v1, v2);
+           dirac = 1/diff; //inversely proportional
+           //Law of cosines
+           float a = euclideanDistance(v1, v2);
+           float b = euclideanDistance(v1, v3);
+           float c = euclideanDistance(v2, v3);
+           float s = (a + b + c)/2;
+           float cosine = (a*a + b*b - c*c)/(2*a*b);
+           float angle = acos(cosine);
+           angleSum += angle;
+           areaSum += sqrt(s*(s-a)*(s-b)*(s-c));
+           i = i + 2;
+        }
+
+     curvature = (3 * (2 * 3.14159 - angleSum) * dirac) / areaSum;
+
+     return curvature;
 }
 
-int Mesh::findThirdVertex(int _v1, int _v2)
-{
-  std::vector<int> neighbours_v1 = m_neighbours->at(_v1);
-  std::vector<int> neighbours_v2 = m_neighbours->at(_v2);
-  unsigned int size_v1 = neighbours_v1.size();
-  unsigned int size_v2 = neighbours_v2.size();
-  int aux_v3;
-  int v3 = -1;
-  unsigned int i=0;
-  bool found = false;
-
-  while (i < size_v1 && !found)
-  {
-      aux_v3 = neighbours_v1[i];
-
-      if(aux_v3 != _v2)
-      {
-          //Look for vertex in v2 neighbour list
-          unsigned int j = 0;
-          while(j < size_v2 && !found)
-          {
-              if(neighbours_v2[j] == aux_v3)
-              {
-                  found = true;
-                  v3 = aux_v3;
-              }
-              ++j;
-          }
-      }
-
-      ++i;
-  }
-
-  return v3;
-}
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
 {
@@ -851,5 +866,26 @@ float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
  float diff3 = _v1[2] - _v2[2];
 
  return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+}
+
+void Mesh::calculatePosition()
+{
+    unsigned int three_i;
+    m_position[0] = 0.0;
+    m_position[1] = 0.0;
+    m_position[2] = 0.0;
+
+    for(unsigned int i=0; i<m_vertCount; ++i)
+    {
+        three_i = 3*i;
+
+        m_position[0] += m_vertices->at(three_i);
+        m_position[1] += m_vertices->at(three_i + 1);
+        m_position[2] += m_vertices->at(three_i + 2);
+    }
+
+    m_position[0] /= m_vertCount;
+    m_position[1] /= m_vertCount;
+    m_position[2] /= m_vertCount;
 }
 

@@ -582,6 +582,7 @@ void NRICP::deformTemplate()
       }
 
       m_D->makeCompressed();
+      m_template->setModified(true);
   }
 
 float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)

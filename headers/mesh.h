@@ -52,7 +52,7 @@ class Mesh
  ///Every group of 3 indices represents a triangle from the mesh
     std::vector<GLuint>* m_faceIndices;
  ///@brief Vector of size 3, representing the mesh's average position
-    vec3 m_position;
+    Vector3f m_position;
  ///@brief Unsigned integer variable -> the number of edges
     unsigned int m_edgeCount;
  ///@brief Unsigned integer variable -> the number of vertices
@@ -83,6 +83,8 @@ class Mesh
     int m_pickedIndex;
 ///@brief Boolean value saying whether or not the mesh should be displayed in wireframe
     bool m_wireframe;
+///@brief Boolean value showing whether the mesh was modified during a NRICP/ICP method
+    bool m_modified;
 
  public:
  ///@brief ctor for Mesh class
@@ -146,9 +148,10 @@ class Mesh
 ///@brief Calculates and returnes the Gaussian curvature of a vertex
 ///@param [in] _index  the index of the vertex whose curvature we are calculating
     float calculateVertexCurvature(int _index);
-///@brief finds the third vertex of the triangle, from the list of the first vetrex's neighbours
-///@param [in] _v1, _v2 first 2 vertices of the triangle
-    int findThirdVertex(int _v1, int _v2);
+///@brief Calculates the average position of the mesh
+    void calculatePosition();
+///@brief find if neighbour2 is in the list of neighbours of neighbour1
+    bool findInListOfNeighbours(int _neighbour1, int _neighbour2);
 
 /// Setters and Getters of the private members
     std::vector<GLfloat>* getVertices(){ return m_vertices; }
@@ -164,11 +167,13 @@ class Mesh
     void setVAO2(GLuint _vao) { m_vao2 = _vao; }
     std::map <std::pair<unsigned int, unsigned int>, short >* getAdjMat(){ return m_adjMat; }
     SparseMatrix<float>* getD(){ return m_D; }
-    float x() { return m_position.v[0]; }
-    float y() { return m_position.v[1]; }
-    float z() { return m_position.v[2]; }
+    float x() { return m_position[0]; }
+    float y() { return m_position[1]; }
+    float z() { return m_position[2]; }
+    Vector3f getPosition() { return m_position; }
     Vector3f getNormal(unsigned int _vertNo);
     Vector3f getVertex(unsigned int _vertNo);
+    void setVertex(unsigned int _vertNo, Vector3f _value);
     std::vector<int>* getLandmarkVertexIndices()
     {
      return m_landmarkVertexIndices;
@@ -185,8 +190,11 @@ class Mesh
     }
 
     void setWireframe(bool _value){ m_wireframe = _value; }
-    bool getWireframe(){ return m_wireframe; }
+    bool isWireframe(){ return m_wireframe; }
     std::vector<int> getNeighbours(int _index) { return m_neighbours->at(_index); }
+    void setModified(bool _modified) { m_modified = _modified; }
+    bool isModified() { return m_modified; }
+
     void appendVertex(Vector3f _vertex)
     {
         //Might create size problems

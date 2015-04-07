@@ -1,6 +1,7 @@
 #include "glfwcontainer.h"
 #include <stdio.h>
 #include <string>
+#include <cstdlib>
 
 GLFWContainer::GLFWContainer(int _width, int _height)
 {
@@ -8,11 +9,15 @@ GLFWContainer::GLFWContainer(int _width, int _height)
     m_gl_height = _height;
     m_logger = Logger::getInstance();
     m_meshCount = 0;
+    m_segmentationCount = 0;
     m_objXRot = 0.0;
     m_objYRot = 0.0;
     m_objZRot = 0.0;
     m_mesh = new Mesh*;
+    m_segmentation = new Segmentation*;
+    m_linker = new Linker*;
     m_clickActiveMeshIndex = 0;
+    m_clickActiveSegmentationIndex = 0;
 }
 
 GLFWContainer::~GLFWContainer()
@@ -33,17 +38,30 @@ GLFWContainer::~GLFWContainer()
     }
 
     int i=0;
-
     while (m_mesh[i] != NULL)
     {
         delete m_mesh[i];
         i++;
     }
 
-//    if(m_window)
+    i=0;
+    while (m_segmentation[i] != NULL)
     {
-//        delete m_window;
+        delete m_segmentation[i];
+        i++;
     }
+
+    i=0;
+    while (m_linker[i] != NULL)
+    {
+        delete m_linker[i];
+        i++;
+    }
+
+//    if(m_window)
+//    {
+//        delete m_window;
+//    }
 }
 
 bool GLFWContainer::initializeWindow()
@@ -93,7 +111,7 @@ void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
     }
     else
     {
-        printf("Mesh could not be loaded from file %s", _fileName);
+     printf("Mesh could not be loaded from file %s", _fileName);
     }
 }
 
@@ -196,10 +214,12 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_1)){
      setClickActiveMeshIndex(0);
+     setClickActiveSegmentationIndex(0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_2)){
      setClickActiveMeshIndex(1);
+     setClickActiveSegmentationIndex(1);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
@@ -214,20 +234,29 @@ void GLFWContainer::checkKeyPress()
      sleep(1.0);
     }
 
+    //Taken out for now
+    //m_mesh[0]->calculateNormals();
+    //m_nrICP->getTemplate()->bindVAO1();
+
     else if(glfwGetKey(m_window, GLFW_KEY_Y))
     {
      m_nrICP->calculateRigidTransformation();
-     m_nrICP->getTemplate()->bindVAO1();
+     for(unsigned int i=0; i<m_meshCount; ++i)
+     {
+      m_linker[i]->updateChanges();
+     }
      sleep(1.0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
      m_nrICP->calculateNonRigidTransformation();
-     //m_mesh[0]->calculateNormals();
-     m_nrICP->getTemplate()->bindVAO1();
      m_nrICP->modifyStiffness(-1.0);
      m_nrICP->modifyBeta(-0.001);
+     for(unsigned int i=0; i<m_meshCount; ++i)
+     {
+      m_linker[i]->updateChanges();
+     }
      sleep(1.0);
     }
 
@@ -236,6 +265,13 @@ void GLFWContainer::checkKeyPress()
       m_mesh[0]->printLandmarkedPoints("../logs/landmarks_template.txt");
       m_mesh[1]->printLandmarkedPoints("../logs/landmarks_target.txt");
       sleep(1.0);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_M))
+    {
+        m_nrICP->setTemplate(m_segmentation[0]->getActiveMesh());
+        m_nrICP->setTarget(m_segmentation[1]->getActiveMesh());
+        m_nrICP->initializeNRICP();
     }
 }
 
@@ -264,18 +300,23 @@ void GLFWContainer::initializeDrawing()
      float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
      loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
     //loadMesh("../models/Rob_Obj_TPose.obj", transformations);
-    //transformations[3] = 0.7;
-    //loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
+    transformations[3] = 0.7;
+    loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
     //loadMesh("../models/Creature.obj", transformations);
 
     //Nonrigid Iterative Closest Point ========================================================
-   //m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-    //m_nrICP->initializeNRICP();
+    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+    m_nrICP->initializeNRICP();
 
-  // loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
-   m_segmentation = new Segmentation(m_mesh[0]);
-   m_segmentation->segment();
+    for(unsigned int i=0; i<m_meshCount; ++i)
+    {
+     m_segmentation[i] = new Segmentation(m_mesh[i]);
+     m_segmentation[i]->segment();
+     m_segmentationCount++;
+     m_linker[i] = new Linker(m_mesh[i], m_segmentation[i]);
+    }
 
     //Transformations =========================================================================
     //Model matrix
@@ -309,8 +350,7 @@ void GLFWContainer::loopDrawing()
 {
     m_camera->setMoved(false);
     vec3 col1 = vec3(0.9, 0.6, 0.3);
-    vec3 col2 = vec3(0.3, 0.6, 0.9);
-    vec3 col3 = vec3(0.5, 0.5, 0.5);
+    vec3 col3 = vec3(0.0, 0.0, 0.0);
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -326,12 +366,13 @@ void GLFWContainer::loopDrawing()
 
 
       //Update View matrix ==========================================================================
-      if(m_camera->getMoved()){
-         mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
-         mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
-         m_viewMat = R*T;
-         m_shader->sendViewMatrixToShader(&m_viewMat);
-         m_camera->setMoved(false);
+      if(m_camera->getMoved())
+      {
+       mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
+       mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
+       m_viewMat = R*T;
+       m_shader->sendViewMatrixToShader(&m_viewMat);
+       m_camera->setMoved(false);
       }
 
     //General drawing loop ==========================================================================
@@ -345,51 +386,60 @@ void GLFWContainer::loopDrawing()
        glFrontFace(GL_CCW);
 
        m_shader->sendModelMatrixToShader(&m_modelMat);
-       m_shader->sendColourPickedToShader(vec3(1.0, 0.0, 0.0));
+       m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
 
-   //Draw mesh 1 ===============================template==============================================
-      m_shader->sendColourChoiceToShader(col1);
-     // m_shader->sendVertexIndicesToShader(m_mesh[0]->getPickedVertexIndex(), m_mesh[0]->getLandmarkVertexIndices());
-      glUseProgram(m_shader->getShaderProgramme());
-      glBindVertexArray(m_mesh[0]->getVAO1());
-      glDrawElements(GL_POINTS, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-     // if(m_mesh[0]->getWireframe())
+      //Draw segments for meshes
+      for(unsigned int i = 0; i < m_segmentationCount; ++i)
       {
-      // glDrawElements(GL_LINE_STRIP, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      }
-    //  else
-      {
-     //  glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      }
-  /*
-   //Draw mesh 2 =================================target===============================================
-      m_shader->sendColourChoiceToShader(col2);
-    //  m_shader->sendVertexIndicesToShader(m_mesh[1]->getPickedVertexIndex(), m_mesh[1]->getLandmarkVertexIndices());
-      glBindVertexArray(m_mesh[1]->getVAO1());
-      glDrawElements(GL_POINTS, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      if(m_mesh[1]->getWireframe())
-      {
-       glDrawElements(GL_LINE_STRIP, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      }
-      else
-      {
-       glDrawElements(GL_TRIANGLES, m_mesh[1]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      }
+       unsigned int size_segs = m_segmentation[i]->getNumberOfSegments();
 
-*/
-   //Draw segments ===============================mesh 0 ================================
-   unsigned int size_segs = m_segmentation->getNumberOfSegments();
+       for(unsigned int j=0; j<size_segs; ++j)
+       {
+        Mesh* mesh = m_segmentation[i]->getMesh(j);
+        mesh->bindVAO1();
 
-      for(unsigned int i=0; i<size_segs; ++i)
+        if(i == m_clickActiveSegmentationIndex && j == m_segmentation[i]->getActiveSegment())
         {
-          col3.v[i%3] = 0.8;
-          m_shader->sendColourChoiceToShader(col3);
-          Mesh* mesh = m_segmentation->getMesh(i);
-          glBindVertexArray(mesh->getVAO1());
-          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-         col3.v[i%3] = 0.1;
+         col3.v[0] = 0.9;
+         col3.v[1] = 0.9;
+         col3.v[2] = 0.9;
+
+         m_shader->sendColourChoiceToShader(col3);
+         glBindVertexArray(mesh->getVAO1());
+         glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+        }
+        else
+        {
+         col3.v[j%3] = 0.2;
+         col3.v[(j+1)%3] = 0.9;
+         col3.v[(j+2)%3] = 0.2;
+
+         m_shader->sendColourChoiceToShader(col3);
+         glBindVertexArray(mesh->getVAO1());
+         glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+        }
+       }
       }
 
+   //Draw meshes
+      for(unsigned int i=0; i<m_meshCount; ++i)
+      {
+       col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);       
+       m_shader->sendColourChoiceToShader(col1);
+       m_shader->sendVertexIndicesToShader(m_mesh[i]->getPickedVertexIndex(), m_mesh[i]->getLandmarkVertexIndices());
+       glUseProgram(m_shader->getShaderProgramme());
+       m_mesh[i]->bindVAO1();
+       glBindVertexArray(m_mesh[i]->getVAO1());
+       glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       if(m_mesh[i]->isWireframe())
+       {
+        glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       }
+       else
+       {
+       // glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       }
+      }
 
 
 
