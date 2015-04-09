@@ -12,10 +12,14 @@ class Linker
   public:
     Linker(Mesh* _mesh, Segmentation* _segmentation);
     ~Linker();
+
+    void updateChanges();
+    void addedLandmark();
+    void clearedLandmarks();
+
     void setMesh(Mesh* _mesh) { m_mesh = _mesh; }
     Mesh* getMesh() { return m_mesh; }
     void setSegmentation(Segmentation* _segmentation) { m_segmentation = _segmentation; }
     Segmentation* getSegmentation() { return m_segmentation; }
-    void updateChanges();
 };
 #endif // LINKER_H

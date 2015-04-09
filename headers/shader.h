@@ -28,8 +28,8 @@ public:
     void sendCameraRayToShader(vec3 _ray);
     void sendColourChoiceToShader(vec3 _colour);
     void sendColourPickedToShader(vec3 _colour);
-    void sendVertexIndicesToShader(int _picked, std::vector<int> *_indices);
-    void sendChosenIndexToShader(int _chosen);
+    void sendPickedIndexToShader(int _picked);
+    void sendLandmarkIndicesToShader(int _size, std::vector<int>* _indices);
 
     GLuint getShaderProgramme() { return m_shaderProgramme; }
 };

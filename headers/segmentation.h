@@ -29,6 +29,7 @@ private:
   unsigned int m_vertCount;
   unsigned int m_regions;
   unsigned int m_activeSegment;
+  bool m_visible;
 
 public:
    Segmentation(Mesh* _originalMesh);
@@ -44,8 +45,11 @@ public:
    void createSegments();
    void createMeshes();
    void addVertexNormalInformation(unsigned int _index);
+   void addLandmarkInformation(unsigned int _landmarkIndex);
+   void addLandmarksInformation();
+   void clearLandmarksInformation();
    void bindVAOs();
-   void calculateActiveSegment(unsigned int _vertexIndex);
+   unsigned int findClosestSegment(unsigned int _vertexIndex);
    void updateMeshFromSegments();
    void updateSegmentsFromMesh();
 
@@ -82,6 +86,9 @@ public:
    {
        return m_subMeshes.at(m_activeSegment);
    }
+
+   void setVisibility(bool _visible) { m_visible = _visible; }
+   bool isVisible() { return m_visible; }
 };
 
 #endif // SEGMENTATION_H

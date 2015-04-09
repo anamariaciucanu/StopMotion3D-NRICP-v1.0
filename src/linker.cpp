@@ -27,4 +27,18 @@ void Linker::updateChanges()
 }
 
 
+void Linker::addedLandmark()
+{
+    //Added landmark on mesh, need to add it to the segmentations
+    unsigned int landmarkIndex = m_mesh->getLandmarkVertexIndices()->at(m_mesh->getLandmarkVertexIndices()->size() - 1);
+    m_segmentation->addLandmarkInformation(landmarkIndex);
+}
+
+void Linker::clearedLandmarks()
+{
+    //Cleared landmarks on mesh, need to clear them from segmentation
+    m_segmentation->clearLandmarksInformation();
+}
+
+
 

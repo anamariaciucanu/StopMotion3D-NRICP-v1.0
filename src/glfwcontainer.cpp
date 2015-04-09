@@ -3,13 +3,14 @@
 #include <string>
 #include <cstdlib>
 
+//TO DO: When selecting back segments, rotation becomes really slow?
+
 GLFWContainer::GLFWContainer(int _width, int _height)
 {
     m_gl_width = _width;
     m_gl_height = _height;
     m_logger = Logger::getInstance();
     m_meshCount = 0;
-    m_segmentationCount = 0;
     m_objXRot = 0.0;
     m_objYRot = 0.0;
     m_objZRot = 0.0;
@@ -17,7 +18,7 @@ GLFWContainer::GLFWContainer(int _width, int _height)
     m_segmentation = new Segmentation*;
     m_linker = new Linker*;
     m_clickActiveMeshIndex = 0;
-    m_clickActiveSegmentationIndex = 0;
+    m_segmentationMode = false;
 }
 
 GLFWContainer::~GLFWContainer()
@@ -102,16 +103,15 @@ void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
     m_mesh[m_meshCount] = new Mesh();
     if(m_mesh[m_meshCount]->loadMesh(_fileName, _transformations))
     {
-     if(m_mesh[m_meshCount]->getNormals()->size() < 1)
-     {
+   //  if(m_mesh[m_meshCount]->getNormals()->size() < 1)
+    // {
          m_mesh[m_meshCount]->calculateNormals();
-     }
-     m_mesh[m_meshCount]->bindVAO1();
+    // }
      m_meshCount++;
     }
     else
     {
-     printf("Mesh could not be loaded from file %s", _fileName);
+      printf("Mesh could not be loaded from file %s", _fileName);
     }
 }
 
@@ -196,11 +196,11 @@ void GLFWContainer::checkKeyPress()
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_F)){
-     m_objYRot -= 0.05;
+     m_objYRot -= 0.1;
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_G)){
-     m_objYRot += 0.05;
+     m_objYRot += 0.1;
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_V)){
@@ -211,27 +211,72 @@ void GLFWContainer::checkKeyPress()
      m_objZRot -= 0.05;
     }
 
-
     else if(glfwGetKey(m_window, GLFW_KEY_1)){
      setClickActiveMeshIndex(0);
-     setClickActiveSegmentationIndex(0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_2)){
      setClickActiveMeshIndex(1);
-     setClickActiveSegmentationIndex(1);
     }
 
-    else if(glfwGetKey(m_window, GLFW_KEY_L)){
-      m_nrICP->addLandmarkCorrespondence();
-      m_nrICP->setLandmarkCorrespChanged(true);
+    else if(glfwGetKey(m_window, GLFW_KEY_3))
+    {
+      m_segmentationMode = !m_segmentationMode;
+
+      if(m_segmentationMode)
+      {
+          //Hardcoded
+          m_nrICP->setTemplate(m_segmentation[0]->getActiveMesh());
+          m_nrICP->setTarget(m_segmentation[1]->getActiveMesh());
+          m_nrICP->initializeNRICP();
+      }
+      else
+      {
+         m_nrICP->setTemplate(m_mesh[0]);
+         m_nrICP->setTarget(m_mesh[1]);
+         m_nrICP->initializeNRICP();
+      }
+
       sleep(1.0);
     }
 
+    else if(glfwGetKey(m_window, GLFW_KEY_I))
+    {
+      m_segmentation[m_clickActiveMeshIndex]->setVisibility(! m_segmentation[m_clickActiveMeshIndex]->isVisible());
+      sleep(1.0);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_L)){
+     if(!m_segmentationMode)
+     {
+      m_nrICP->addLandmarkCorrespondence();
+      m_nrICP->setLandmarkCorrespChanged(true);
+
+      //TO DO: Hard coded
+      m_linker[0]->addedLandmark();
+      m_linker[1]->addedLandmark();
+      sleep(1.0);
+     }
+    }
+
     else if(glfwGetKey(m_window, GLFW_KEY_K)){
-     m_nrICP->clearLandmarkCorrespondences();
-     m_nrICP->setLandmarkCorrespChanged(true);
-     sleep(1.0);
+     if(!m_segmentationMode)
+      {
+        m_nrICP->clearLandmarkCorrespondences();
+        m_nrICP->setLandmarkCorrespChanged(true);
+
+        //TO DO: Hard coded
+        m_linker[0]->clearedLandmarks();
+        m_linker[1]->clearedLandmarks();
+        sleep(1.0);
+      }
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_P))
+    {
+      m_mesh[0]->printLandmarkedPoints("../logs/landmarks_template.txt");
+      m_mesh[1]->printLandmarkedPoints("../logs/landmarks_target.txt");
+      sleep(1.0);
     }
 
     //Taken out for now
@@ -243,7 +288,7 @@ void GLFWContainer::checkKeyPress()
      m_nrICP->calculateRigidTransformation();
      for(unsigned int i=0; i<m_meshCount; ++i)
      {
-      m_linker[i]->updateChanges();
+       m_linker[i]->updateChanges();
      }
      sleep(1.0);
     }
@@ -258,20 +303,6 @@ void GLFWContainer::checkKeyPress()
       m_linker[i]->updateChanges();
      }
      sleep(1.0);
-    }
-
-    else if(glfwGetKey(m_window, GLFW_KEY_P))
-    {
-      m_mesh[0]->printLandmarkedPoints("../logs/landmarks_template.txt");
-      m_mesh[1]->printLandmarkedPoints("../logs/landmarks_target.txt");
-      sleep(1.0);
-    }
-
-    else if(glfwGetKey(m_window, GLFW_KEY_M))
-    {
-        m_nrICP->setTemplate(m_segmentation[0]->getActiveMesh());
-        m_nrICP->setTarget(m_segmentation[1]->getActiveMesh());
-        m_nrICP->initializeNRICP();
     }
 }
 
@@ -302,19 +333,18 @@ void GLFWContainer::initializeDrawing()
     //loadMesh("../models/Rob_Obj_TPose.obj", transformations);
     transformations[3] = 0.7;
     loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
-    //loadMesh("../models/Creature.obj", transformations);
+    //loadMesh("../models/Rob_Obj_Frame2.obj", transformations);
 
     //Nonrigid Iterative Closest Point ========================================================
-    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-    m_nrICP->initializeNRICP();
+  //  m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+  //   m_nrICP->initializeNRICP();
 
-    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+  //  loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
     for(unsigned int i=0; i<m_meshCount; ++i)
     {
      m_segmentation[i] = new Segmentation(m_mesh[i]);
      m_segmentation[i]->segment();
-     m_segmentationCount++;
      m_linker[i] = new Linker(m_mesh[i], m_segmentation[i]);
     }
 
@@ -389,55 +419,67 @@ void GLFWContainer::loopDrawing()
        m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
 
       //Draw segments for meshes
-      for(unsigned int i = 0; i < m_segmentationCount; ++i)
+      for(unsigned int i = 0; i < m_meshCount; ++i)
       {
-       unsigned int size_segs = m_segmentation[i]->getNumberOfSegments();
-
-       for(unsigned int j=0; j<size_segs; ++j)
+       if(m_segmentation[i]->isVisible())
        {
-        Mesh* mesh = m_segmentation[i]->getMesh(j);
-        mesh->bindVAO1();
+        unsigned int size_segs = m_segmentation[i]->getNumberOfSegments();
 
-        if(i == m_clickActiveSegmentationIndex && j == m_segmentation[i]->getActiveSegment())
+        for(unsigned int j=0; j<size_segs; ++j)
         {
-         col3.v[0] = 0.9;
-         col3.v[1] = 0.9;
-         col3.v[2] = 0.9;
+         Mesh* mesh = m_segmentation[i]->getMesh(j);
+         mesh->bindVAO1();
 
-         m_shader->sendColourChoiceToShader(col3);
-         glBindVertexArray(mesh->getVAO1());
-         glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-        }
-        else
-        {
-         col3.v[j%3] = 0.2;
-         col3.v[(j+1)%3] = 0.9;
-         col3.v[(j+2)%3] = 0.2;
+         if(j == m_segmentation[i]->getActiveSegment())
+         {
+          col3.v[0] = 0.8;
+          col3.v[1] = 0.2;
+          col3.v[2] = 0.2;
 
-         m_shader->sendColourChoiceToShader(col3);
-         glBindVertexArray(mesh->getVAO1());
-         glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+          m_shader->sendColourChoiceToShader(col3);
+          glBindVertexArray(mesh->getVAO1());
+          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+         }
+         else
+         {
+          //col3.v[j%3] = 0.2;
+          //col3.v[(j+1)%3] = 0.9;
+          //col3.v[(j+2)%3] = 0.2;
+
+          col3.v[0] = 0.9;
+          col3.v[1] = 0.9;
+          col3.v[2] = 0.9;
+          m_shader->sendColourChoiceToShader(col3);
+          glBindVertexArray(mesh->getVAO1());
+          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+         }
         }
        }
-      }
+     }
 
    //Draw meshes
       for(unsigned int i=0; i<m_meshCount; ++i)
       {
-       col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);       
+       std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
+
+       col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);
        m_shader->sendColourChoiceToShader(col1);
-       m_shader->sendVertexIndicesToShader(m_mesh[i]->getPickedVertexIndex(), m_mesh[i]->getLandmarkVertexIndices());
+       m_shader->sendPickedIndexToShader(m_mesh[i]->getPickedVertexIndex());
+       m_shader->sendLandmarkIndicesToShader(landmarks->size(), landmarks);
        glUseProgram(m_shader->getShaderProgramme());
+
        m_mesh[i]->bindVAO1();
        glBindVertexArray(m_mesh[i]->getVAO1());
        glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+
+       m_shader->sendLandmarkIndicesToShader(0, landmarks);
        if(m_mesh[i]->isWireframe())
        {
         glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
        }
        else
        {
-       // glDrawElements(GL_TRIANGLES, m_mesh[0]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+        glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
        }
       }
 
@@ -496,10 +538,9 @@ void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _target
      s1 >> l1;
      s2 >> l2;
 
+     //TO DO: Hardcoded
      m_mesh[0]->setPickedVertexIndex(l1);
-     m_mesh[0]->addLandmarkVertexIndex();
      m_mesh[1]->setPickedVertexIndex(l2);
-     m_mesh[1]->addLandmarkVertexIndex();
      m_nrICP->addLandmarkCorrespondence();
     }
 
@@ -513,4 +554,14 @@ void GLFWContainer::printConfiguration()
     const GLubyte* version = glGetString(GL_VERSION);
     printf("Renderer: %s\n", renderer);
     printf("OpenGL version supported %s\n", version);
+}
+
+void GLFWContainer::printCurvatureActiveVertex()
+{
+    Mesh* mesh = m_mesh[m_clickActiveMeshIndex];
+    int pickedIndex = mesh->getPickedVertexIndex();
+    float vertexCurvature = mesh->calculateVertexCurvature(pickedIndex);
+
+    printf("Curvature of vertex %i, of mesh %i is: ", pickedIndex, m_clickActiveMeshIndex);
+    printf(" %f \n", vertexCurvature);
 }

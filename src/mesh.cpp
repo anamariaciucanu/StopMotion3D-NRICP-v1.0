@@ -3,6 +3,10 @@
 #include <boost/tokenizer.hpp>
 #define EPSILON 0.000001
 
+
+//TO DO: Fix normals issue (normal count >> vert count?)
+//Temp fix: Calculate my own normals when loading mesh
+
 Mesh::Mesh()
 {
     m_vertices = new std::vector<GLfloat>();
@@ -69,7 +73,7 @@ Mesh::~Mesh()
 
  if(m_landmarkVertexIndices)
  {
-   delete m_landmarkVertexIndices;
+   delete [] m_landmarkVertexIndices;
  }
 }
 
@@ -137,7 +141,7 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
 
            continue;
         }
-*/
+
          if (line.substr(0,2) == "vn")
         {
            istringstream s(line.substr(2));
@@ -152,7 +156,7 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
 
            continue;
          }
-
+*/
         if (line.substr(0,2) == "f ")
         {
             istringstream s(line.substr(2));
@@ -200,7 +204,7 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
     }
 
     moveObject(_transformations[3], _transformations[4], _transformations[5]);
-    calculateNormals();
+    //calculateNormals();
     // buildVertexNormalVector();
 
     return true;
@@ -651,7 +655,7 @@ float Mesh::calculateVertexCurvature(int _index)
            i = i + 2;
         }
 
-     curvature = (3 * (2 * 3.14159 - angleSum) * dirac) / areaSum;
+     curvature = (3 * (2 * 3.14159 - angleSum) * dirac * dirac) / areaSum;
 
      return curvature;
 }

@@ -58,7 +58,8 @@ void calculateClickRay(double _mouseX, double _mouseY)
     if(intersection >= 0)
     {
       activeMesh->setPickedVertexIndex(intersection);
-      activeSegmentation->calculateActiveSegment(intersection);
+      //TO DO: when selected, NRICP could be refreshed automatically...but a bit sensitive here
+      activeSegmentation->setActiveSegment(activeSegmentation->findClosestSegment(intersection));
     }
 }
 
@@ -89,6 +90,11 @@ void mouseClickEvent(GLFWwindow *_window, int _button, int _action, int _mods)
    if(_button == GLFW_MOUSE_BUTTON_2 && _action == GLFW_PRESS)
    {
     glfw_container->setWireframe(!glfw_container->getWireframe());
+   }
+
+   if(_button == GLFW_MOUSE_BUTTON_3 && _action == GLFW_PRESS)
+   {
+    glfw_container->printCurvatureActiveVertex();
    }
 }
 

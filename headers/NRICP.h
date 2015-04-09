@@ -52,8 +52,6 @@ class NRICP
     float m_gamma;
  ///@brief Pointer to map of pairs -> the edge list
     std::map < std::pair<unsigned int, unsigned int>, short >* m_adjMat;
- ///@brief Pointer to vector of pairs -> the landmark correspondences list
-    std::vector<std::pair<unsigned int, unsigned int> >* m_landmarkCorrespondences;
  ///@brief Boolean value determining whether the landmark correspondences vector has been modified
     bool m_landmarkCorrespChanged;
  ///@brief Boolean value that says whether the stiffness has changed
@@ -74,8 +72,6 @@ class NRICP
     SparseMatrix<GLfloat>* m_A;
  ///@brief Pointer to a sparse matrix of floats -> m_B matrix from NRICP, used to determine m_X
     SparseMatrix<GLfloat>* m_B;
- ///@brief Output file reader
-    ofstream myfile;
 
 
  public:
@@ -148,7 +144,6 @@ class NRICP
     ///@param [in] _Xj_1, _Xj Dynamic matrices of floats -> transformation matricesfrom 2 consecutive iterations
     ///@param [out] Float variable representing the norm
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
-
     /// Setters and Getters for the private members
     void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
     void setNRICPStarted(bool _value) { m_nricpStarted = _value; }

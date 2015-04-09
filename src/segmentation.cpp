@@ -9,6 +9,7 @@ Segmentation::Segmentation(Mesh *_originalMesh)
     m_vertCount = m_originalMesh->getVertCount();
     m_regions = 0;
     m_activeSegment = 0;
+    m_visible = true;
     _originalMesh->buildNeighbourList();
     createVertexInfoList();
 }
@@ -35,11 +36,15 @@ void Segmentation::segment()
     //Step 2: Label vertices of negative curvature as boundaries using threshold
     //        Label remaining verts as seeds
 
+    //ofstream myfile;
+    //myfile.open("../logs/K.txt");
 
     for(unsigned int i = 0; i < m_vertCount; ++i)
     {
         float curvature = m_originalMesh->calculateVertexCurvature(i);
+       // myfile<<curvature<<"\n";
         m_vertInfos[i]->curvature = curvature;
+
         if (curvature > m_threshold)
         {
             m_vertInfos[i]->category = true; //seed
@@ -49,6 +54,7 @@ void Segmentation::segment()
             m_vertInfos[i]->visited = true;
         }
     }
+    //myfile.close();
 
 
     //Step 3: Eliminate isolated vertices
@@ -62,7 +68,6 @@ void Segmentation::segment()
     //Step 5: Assign non-labeled vertices to parts and eliminate parts having too few vertices
     createSegments();
     createMeshes();
-    bindVAOs();
 }
 
 void Segmentation::createVertexInfoList()
@@ -72,7 +77,7 @@ void Segmentation::createVertexInfoList()
         VertexInfo* auxVertInfo = new VertexInfo();
         auxVertInfo->index = i;
         auxVertInfo->category = false; //initialize as boundary
-        auxVertInfo->curvature = -10000;
+        auxVertInfo->curvature = -1000000;
         auxVertInfo->region = -1;
         auxVertInfo->visited = false;
         m_vertInfos.push_back(auxVertInfo);
@@ -345,18 +350,18 @@ void Segmentation::createSegments()
 
  void Segmentation::createMeshes()
  {
-     unsigned int size_segs = m_segmentations.size();
+     //TO DO: Transfer picked point to segments if you want to add segment based landmarks
 
+     //Allocate space for meshes and add vertices and normals from original mesh to segments
+     unsigned int size_segs = m_segmentations.size();
      for(unsigned int i=0; i<size_segs; ++i)
      {
          m_subMeshes.push_back(new Mesh());
-
-         //Vertices and Normals
          addVertexNormalInformation(i);
      }
 
 
-   //Face indices
+   //Create new face indices for each segment
     std::vector<GLuint>* faces = m_originalMesh->getFaceIndices();
     unsigned int size_faces = m_originalMesh->getFaceCount();
     unsigned int three_i;
@@ -388,6 +393,17 @@ void Segmentation::createSegments()
             m_subMeshes.at(j-1)->appendFace(newIndices);
         }
     }
+
+    //Calculate average position
+    for(unsigned int i = 0; i < m_subMeshes.size(); ++i)
+    {
+        m_subMeshes.at(i)->calculatePosition();
+    }
+
+    //Append landmarks
+    addLandmarksInformation();
+
+    //TO DO: append extra verts for visualization
  }
 
 Vector3i Segmentation::findFaceInSegment(unsigned int _v1, unsigned int _v2, unsigned int _v3, unsigned int _j)
@@ -444,6 +460,81 @@ void Segmentation::addVertexNormalInformation(unsigned int _index)
   }
 }
 
+
+//TO DO: Code repreating itself, see below function
+void Segmentation::addLandmarkInformation(unsigned int _landmarkIndex)
+{
+ //Find the segments closest to this landmark
+   unsigned int closestSegment = findClosestSegment(_landmarkIndex);
+
+   //Look for the landmark index in the list of verts from the closest segment
+   std::vector<unsigned int>* segment = m_segmentations.at(closestSegment);
+   bool found = false;
+   unsigned int j = 0;
+
+    while(!found && j < segment->size())
+    {
+      if(segment->at(j) == _landmarkIndex)
+       {
+        found = true;
+       }
+       ++j;
+    }
+
+    if(found) //found at location j-1
+    {
+      Mesh* mesh =  m_subMeshes.at(closestSegment);
+      mesh->setPickedVertexIndex(j-1);
+      mesh->addLandmarkVertexIndex();
+    }
+}
+
+void Segmentation::clearLandmarksInformation()
+{
+  for(unsigned int i=0; i<m_subMeshes.size(); ++i)
+  {
+    Mesh* mesh = m_subMeshes.at(i);
+    mesh->clearLandmarkVertexIndices();
+  }
+}
+
+
+void Segmentation::addLandmarksInformation()
+{
+  std::vector<int>* landmarks = m_originalMesh->getLandmarkVertexIndices();
+  unsigned int size = landmarks->size();
+
+  for(unsigned int i=0; i<size; ++i)
+  {
+      //Find the segments closest to this landmark
+      unsigned int landmarkIndex = (unsigned int)landmarks->at(i);
+      unsigned int closestSegment = findClosestSegment(landmarkIndex);
+
+      //Look for the landmark index in the list of verts from the closest segment
+      std::vector<unsigned int>* segment = m_segmentations.at(closestSegment);
+      bool found = false;
+      unsigned int j = 0;
+
+      while(!found && j < segment->size())
+      {
+          if(segment->at(j) == landmarkIndex)
+          {
+              found = true;
+          }
+
+          ++j;
+      }
+
+      if(found) //found at location j-1
+      {
+          Mesh* mesh =  m_subMeshes.at(closestSegment);
+          mesh->setPickedVertexIndex(j-1);
+          mesh->addLandmarkVertexIndex();
+      }
+  }
+}
+
+
 void Segmentation::bindVAOs()
 {
     unsigned int size_meshes = m_subMeshes.size();
@@ -455,7 +546,7 @@ void Segmentation::bindVAOs()
 }
 
 
-void Segmentation::calculateActiveSegment(unsigned int _vertexIndex)
+unsigned int Segmentation::findClosestSegment(unsigned int _vertexIndex)
 {
   Vector3f v1 = m_originalMesh->getVertex(_vertexIndex);
 
@@ -466,8 +557,7 @@ void Segmentation::calculateActiveSegment(unsigned int _vertexIndex)
   unsigned int i = 0;
 
   while (i<size)
-  {
-      m_subMeshes.at(i)->calculatePosition();
+  {      
       Vector3f segmentPosition = m_subMeshes.at(i)->getPosition();
 
       distance = euclideanDistance(v1, segmentPosition);
@@ -480,7 +570,7 @@ void Segmentation::calculateActiveSegment(unsigned int _vertexIndex)
       i++;
   }
 
-   m_activeSegment = minSegmentIndex;
+   return minSegmentIndex;
 }
 
 void Segmentation::updateMeshFromSegments()
@@ -525,6 +615,7 @@ void Segmentation::updateSegmentsFromMesh()
              Vector3f changedVertex = m_originalMesh->getVertex(segment->at(j));
              mesh_aux->setVertex(j,changedVertex);
          }
+         mesh_aux->calculatePosition();
        }
 
        m_originalMesh->setModified(false);
