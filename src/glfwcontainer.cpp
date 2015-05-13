@@ -106,6 +106,7 @@ void GLFWContainer::loadMesh(const char* _fileName, float* _transformations)
    //  if(m_mesh[m_meshCount]->getNormals()->size() < 1)
     // {
          m_mesh[m_meshCount]->calculateNormals();
+         m_mesh[m_meshCount]->bindVAO1();
     // }
      m_meshCount++;
     }
@@ -157,6 +158,21 @@ void GLFWContainer::update_camera_position()
      }
  }
 
+void GLFWContainer::update_titlebar()
+ {
+     static double previous_seconds = glfwGetTime();
+     double current_seconds = glfwGetTime();
+     double elapsed_seconds = current_seconds - previous_seconds;
+
+     if(elapsed_seconds > 0.2)
+     {
+          previous_seconds = current_seconds;
+          char tmp[128];
+          sprintf(tmp, "Stiffness %.2f,  Segmentation mode %i ", m_nrICP->getStiffness(), m_segmentationMode);
+          glfwSetWindowTitle(m_window, tmp);
+     }
+ }
+
 void GLFWContainer::checkKeyPress()
 {
     //To Do: put separate
@@ -187,28 +203,34 @@ void GLFWContainer::checkKeyPress()
       m_camera->setMoved(true);
     }
 
-    else if(glfwGetKey(m_window, GLFW_KEY_R)){
-     m_objXRot += 0.05;
+    else if(glfwGetKey(m_window, GLFW_KEY_E)){
+     m_objXRot = m_objXRot < -360.0 ? 0.0 : m_objXRot - 0.1;
+     m_camera->setRotated(true);
     }
 
-    else if(glfwGetKey(m_window, GLFW_KEY_E)){
-     m_objXRot -= 0.05;
+    else if(glfwGetKey(m_window, GLFW_KEY_R)){
+     m_objXRot = m_objXRot > 360.0 ? 0.0 : m_objXRot + 0.1;
+     m_camera->setRotated(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_F)){
-     m_objYRot -= 0.1;
+     m_objYRot = m_objYRot < -360.0 ? 0.0 : m_objYRot - 0.1;
+     m_camera->setRotated(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_G)){
-     m_objYRot += 0.1;
+     m_objYRot = m_objYRot > 360.0 ? 0.0 : m_objYRot + 0.1;
+     m_camera->setRotated(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_V)){
-     m_objZRot += 0.05;
+     m_objZRot = m_objZRot < -360.0 ? 0.0 : m_objZRot - 0.1;
+     m_camera->setRotated(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_B)){
-     m_objZRot -= 0.05;
+     m_objZRot = m_objZRot > 360.0 ? 0.0 : m_objZRot + 0.1;
+     m_camera->setRotated(true);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_1)){
@@ -328,25 +350,30 @@ void GLFWContainer::initializeDrawing()
 
 
     //Load a scene ============================================================================
-     float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
-     loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
-    //loadMesh("../models/Rob_Obj_TPose.obj", transformations);
+    float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
+    //loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
+    loadMesh("../models/HelliDropter1.obj", transformations);
     transformations[3] = 0.7;
-    loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
-    //loadMesh("../models/Rob_Obj_Frame2.obj", transformations);
+    //loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
+    loadMesh("../models/HelliDropter2.obj", transformations);
 
     //Nonrigid Iterative Closest Point ========================================================
-  //  m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-  //   m_nrICP->initializeNRICP();
+    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+    m_nrICP->initializeNRICP();
 
-  //  loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+    //loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
-    for(unsigned int i=0; i<m_meshCount; ++i)
+    /*
+     for(unsigned int i=0; i<m_meshCount; ++i)
     {
      m_segmentation[i] = new Segmentation(m_mesh[i]);
      m_segmentation[i]->segment();
      m_linker[i] = new Linker(m_mesh[i], m_segmentation[i]);
     }
+   */
+
+    //Bind VAOs
+
 
     //Transformations =========================================================================
     //Model matrix
@@ -389,25 +416,25 @@ void GLFWContainer::loopDrawing()
      //Update Model Matrix ==========================================================================
       m_modelMat = identity_mat4();
 
-      mat4 Rx = rotate_x_deg(identity_mat4(),  m_objXRot);
-      mat4 Ry = rotate_y_deg(identity_mat4(),  m_objYRot);
-      mat4 Rz = rotate_z_deg(identity_mat4(),  m_objZRot);
-      m_modelMat = Rz*Ry*Rx*m_modelMat;
+       mat4 Rx = rotate_x_deg(identity_mat4(),  m_objXRot);
+       mat4 Ry = rotate_y_deg(identity_mat4(),  m_objYRot);
+       mat4 Rz = rotate_z_deg(identity_mat4(),  m_objZRot);
+       m_modelMat = Rz*Ry*Rx*m_modelMat;
+       m_shader->sendModelMatrixToShader(&m_modelMat);
 
 
       //Update View matrix ==========================================================================
-      if(m_camera->getMoved())
+      if(m_camera->isMoved())
       {
        mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
        mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
        m_viewMat = R*T;
-       m_shader->sendViewMatrixToShader(&m_viewMat);
        m_camera->setMoved(false);
+       m_shader->sendViewMatrixToShader(&m_viewMat);
       }
 
     //General drawing loop ==========================================================================
-       //update_fps_counter();
-       update_camera_position();
+       update_titlebar();
        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
        glViewport(0, 0, m_gl_width, m_gl_height);
        glEnable(GL_CULL_FACE);
@@ -415,10 +442,12 @@ void GLFWContainer::loopDrawing()
        glCullFace(GL_BACK);
        glFrontFace(GL_CCW);
 
-       m_shader->sendModelMatrixToShader(&m_modelMat);
+
        m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
 
       //Draw segments for meshes
+
+       /*
       for(unsigned int i = 0; i < m_meshCount; ++i)
       {
        if(m_segmentation[i]->isVisible())
@@ -442,22 +471,20 @@ void GLFWContainer::loopDrawing()
          }
          else
          {
-          //col3.v[j%3] = 0.2;
-          //col3.v[(j+1)%3] = 0.9;
-          //col3.v[(j+2)%3] = 0.2;
-
           col3.v[0] = 0.9;
           col3.v[1] = 0.9;
           col3.v[2] = 0.9;
           m_shader->sendColourChoiceToShader(col3);
           glBindVertexArray(mesh->getVAO1());
-          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);          
          }
+        mesh->unbindVAO1();
         }
        }
      }
-
+   */
    //Draw meshes
+
       for(unsigned int i=0; i<m_meshCount; ++i)
       {
        std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
@@ -469,6 +496,7 @@ void GLFWContainer::loopDrawing()
        glUseProgram(m_shader->getShaderProgramme());
 
        m_mesh[i]->bindVAO1();
+
        glBindVertexArray(m_mesh[i]->getVAO1());
        glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
@@ -481,6 +509,8 @@ void GLFWContainer::loopDrawing()
        {
         glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
        }
+
+        m_mesh[i]->unbindVAO1();
       }
 
 

@@ -14,6 +14,8 @@ class Camera
  private:
     ///@brief Boolean variable -> checks whether the camera has moved using the keyboard buttons
     bool m_moved;
+    ///@brief Boolean variable -> checks whether the camera has rotated using the keyboard buttons
+    bool m_rotated;
     ///@brief Float variable -> speed of the camera when moving
     float m_speed;
     ///@brief Float variable -> yaw speed of the camera (rotation around Y axis)
@@ -50,6 +52,8 @@ public:
 ///@param [in] _height -> height of the image plane
     Camera(float _width, float _height)
     {
+     m_moved = false;
+     m_rotated = false;
      m_speed = 1.0f;
      m_yaw_speed = 10.0f;
      m_pos[0] = 0.0f;
@@ -112,7 +116,9 @@ public:
 
  ///@brief Setters and Getters for the private variables
     void setMoved(bool _moved) { m_moved = _moved; }
-    bool getMoved() { return m_moved; }
+    bool isMoved() { return m_moved; }
+    void setRotated(bool _rotated) { m_rotated = _rotated; }
+    bool isRotated() { return m_rotated; }
     void setSpeed(float _speed) { m_speed = _speed; }
     float getSpeed(){ return m_speed; }
     void setYawSpeed(float _yaw_speed) { m_yaw_speed = _yaw_speed; }

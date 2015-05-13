@@ -72,11 +72,9 @@ class Mesh
     GLuint m_vbo1Position;
     GLuint m_vbo1Indices;
     GLuint m_vbo1Normals;
-    GLuint m_vbo2Position;
     GLuint m_vboTextureCoord;
  ///@brief GLuint addresses for vertex array objects that will contain any of the above buffer objects
     GLuint m_vao1;
-    GLuint m_vao2;
  ///@brief Pointer to vector of integers -> list of landmarked vertices on current mesh
     std::vector<int>* m_landmarkVertexIndices;
  ///@brief Integer variable representing the currently picked vertex index
@@ -105,7 +103,8 @@ class Mesh
     void normaliseMesh();
  ///@brief methods for binding the corresponding vertex array objects
     void bindVAO1();
-    void bindVAO2();
+ ///@brief deallocate buffer data memory
+    void unbindVAO1();
  ///@brief creates the arc-node list, m_adjMat
     void buildArcNodeMatrix();
  ///@brief creates the vertex matrix, m_D
@@ -163,8 +162,6 @@ class Mesh
     unsigned int getTexCoordCount() { return m_texCoordCount; }
     GLuint getVAO1() { return m_vao1; }
     void setVAO1(GLuint _vao) { m_vao1 = _vao; }
-    GLuint getVAO2() { return m_vao2; }
-    void setVAO2(GLuint _vao) { m_vao2 = _vao; }
     std::map <std::pair<unsigned int, unsigned int>, short >* getAdjMat(){ return m_adjMat; }
     SparseMatrix<float>* getD(){ return m_D; }
     float x() { return m_position[0]; }

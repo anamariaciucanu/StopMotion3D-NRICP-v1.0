@@ -412,12 +412,6 @@ void Mesh::bindVAO1()
         glEnableVertexAttribArray(1);
     }
 
-    if(m_vertCount > 0 && m_normals->size() > 0)
-    {
-        glGenBuffers(1, &m_vbo2Position);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vbo2Position);
-        glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount * sizeof(GLfloat), &m_vertices->at(0), GL_STATIC_DRAW);
-    }
 
 //Obs! 14 coordinates instead of 8
 /*
@@ -432,24 +426,15 @@ void Mesh::bindVAO1()
 */
 }
 
-void Mesh::bindVAO2()
+
+void Mesh::unbindVAO1()
 {
-    unsigned int size = m_vertNormalLines->size();
-
-    m_vao2 = 0;
-    glGenVertexArrays(1, &m_vao2);
-    glBindVertexArray(m_vao2);
-
- //Copy mesh data into VBO ======================================================================
-    if(size > 0)
-    {
-        glGenBuffers(1, &m_vbo2Position);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vbo2Position);
-        glBufferData(GL_ARRAY_BUFFER, size * sizeof(GLfloat), &m_vertNormalLines->at(0), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL); //0 corresponds to vertex positions in VAO
-        glEnableVertexAttribArray(0);
-    }
+ glDeleteBuffers(1, &m_vbo1Position);
+ glDeleteBuffers(1, &m_vbo1Indices);
+ glDeleteBuffers(1, &m_vbo1Normals);
+ glDeleteVertexArrays(1, &m_vao1);
 }
+
 
 void Mesh::buildArcNodeMatrix()
 {

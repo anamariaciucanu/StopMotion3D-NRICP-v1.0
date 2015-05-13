@@ -16,6 +16,8 @@
 #include "NRICP.h"
 #include "linker.h"
 
+//TO DO: include text
+
 using namespace std;
 
 class GLFWContainer
@@ -89,6 +91,8 @@ class GLFWContainer
     void update_fps_counter();
  ///@brief prints the camera position in the title bar every 0.2 seconds
     void update_camera_position();
+ ///@brief updates titlebar with stiffness and segmentation mode values
+    void update_titlebar();
  ///@brief prints the OpenGL version
     void printConfiguration();
  ///@brief loads landmarks from files and adds them to the NRICP object
@@ -118,6 +122,8 @@ class GLFWContainer
     {
         m_mesh[m_clickActiveMeshIndex]->setWireframe(_value);
     }
+    bool isSegmentationMode() { return m_segmentationMode;}
+    void setSegmentationMode(bool _segmentationMode) { m_segmentationMode = _segmentationMode; }
     void printCurvatureActiveVertex();
 };
 

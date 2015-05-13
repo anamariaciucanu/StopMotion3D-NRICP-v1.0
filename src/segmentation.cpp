@@ -403,6 +403,9 @@ void Segmentation::createSegments()
     //Append landmarks
     addLandmarksInformation();
 
+    //Update/bind VAOs
+    bindVAOs();
+
     //TO DO: append extra verts for visualization
  }
 

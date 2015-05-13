@@ -51,15 +51,21 @@ void calculateClickRay(double _mouseX, double _mouseY)
     Vector3f ray = Vector3f(ray_aux.v[0], ray_aux.v[1], ray_aux.v[2]);
 
     Mesh* activeMesh =  glfw_container->getClickActiveMesh();
-    Segmentation* activeSegmentation = glfw_container->getClickActiveSegmentation();
+    //Segmentation* activeSegmentation = glfw_container->getClickActiveSegmentation();
 
-    int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
-
-    if(intersection >= 0)
+    //if(!glfw_container->isSegmentationMode())
     {
-      activeMesh->setPickedVertexIndex(intersection);
-      //TO DO: when selected, NRICP could be refreshed automatically...but a bit sensitive here
-      activeSegmentation->setActiveSegment(activeSegmentation->findClosestSegment(intersection));
+     int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
+
+     if(intersection >= 0)
+     {
+       activeMesh->setPickedVertexIndex(intersection);
+       //TO DO: when selected, NRICP could be refreshed automatically...but a bit sensitive here?
+      // if(activeSegmentation->isVisible())
+       {
+      //  activeSegmentation->setActiveSegment(activeSegmentation->findClosestSegment(intersection));
+       }
+     }
     }
 }
 
