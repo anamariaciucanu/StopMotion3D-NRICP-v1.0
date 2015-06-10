@@ -51,22 +51,13 @@ void calculateClickRay(double _mouseX, double _mouseY)
     Vector3f ray = Vector3f(ray_aux.v[0], ray_aux.v[1], ray_aux.v[2]);
 
     Mesh* activeMesh =  glfw_container->getClickActiveMesh();
-    Segmentation* activeSegmentation = glfw_container->getClickActiveSegmentation();
 
-    if(!glfw_container->isSegmentationMode())
-    {
-     int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
+    int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
 
      if(intersection >= 0)
      {
        activeMesh->setPickedVertexIndex(intersection);
-       //TO DO: when selected, NRICP could be refreshed automatically...but a bit sensitive here?
-       if(activeSegmentation->isVisible())
-       {
-        activeSegmentation->setActiveSegment(activeSegmentation->findClosestSegment(intersection));
-       }
-     }
-    }
+     }    
 }
 
 //Activated when the window is resized
@@ -76,11 +67,6 @@ void glfw_window_size_callback(GLFWwindow* _window, int _width, int _height)
     glfw_container->setHeight(_height);
 }
 
-//Activated when an error occured
-void glfw_error_callback(int error, const char* description)
-{
-   glfw_container->getLogger()->gl_log_err("GLFW ERROR: code %i msg: %s\n", error, description);
-}
 
 //Activated when the left mouse button is clicked
 void mouseClickEvent(GLFWwindow *_window, int _button, int _action, int _mods)

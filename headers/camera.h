@@ -7,11 +7,13 @@
 
 
 #include "matrix.h"
+#include "math.h"
 
 
 class Camera
 {
  private:
+    //fdsffsdfsdfd
     ///@brief Boolean variable -> checks whether the camera has moved using the keyboard buttons
     bool m_moved;
     ///@brief Boolean variable -> checks whether the camera has rotated using the keyboard buttons

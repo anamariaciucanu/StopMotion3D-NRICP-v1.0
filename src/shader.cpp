@@ -5,7 +5,6 @@
 
 Shader::Shader(const char *_fileVertexShader, const char *_fileFragmentShader)
 {
- m_logger = Logger::getInstance();
  loadVertexShader(_fileVertexShader);
  loadFragmentShader(_fileFragmentShader);
  createShaderProgramme();
@@ -29,7 +28,6 @@ bool Shader::loadVertexShader(const char* _fileVertexShader)
  if(GL_TRUE!=params)
  {
   fprintf(stderr, "ERROR: GL shader index %i did not compile\n", m_vertexShader);
-  m_logger->print_shader_info_log(m_vertexShader);
   return false;
  }
  return true;
@@ -47,7 +45,6 @@ bool Shader::loadFragmentShader(const char* _fileFragmentShader)
  if(GL_TRUE!=params)
  {
   fprintf(stderr, "ERROR: GL shader index %i did not compile\n", m_fragmentShader);
-  m_logger->print_shader_info_log(m_fragmentShader);
   return false;
  }
  return true;
@@ -66,7 +63,6 @@ bool Shader::createShaderProgramme()
     if(GL_TRUE != params)
     {
      fprintf(stderr, "ERROR: could not link shader programme GL index %u\n", m_shaderProgramme);
-     m_logger->print_programme_info_log(m_shaderProgramme);
      return false;
     }
     return true;

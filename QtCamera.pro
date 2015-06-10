@@ -8,24 +8,18 @@ CONFIG += console
 QT+= opengl core
 SOURCES+= src/main.cpp \
             src/matrix.cpp \
-    src/logger.cpp \
     src/glfwcontainer.cpp \
     src/shader.cpp \
     src/mesh.cpp \
-    src/NRICP.cpp \
-    src/segmentation.cpp \
-    src/linker.cpp
+    src/NRICP.cpp
 
 HEADERS+= headers/matrix.h \
-    headers/logger.h \
     headers/glfwcontainer.h \
     headers/load_functions.h \
     headers/camera.h \
     headers/shader.h \
     headers/mesh.h \
-    headers/NRICP.h \
-    headers/segmentation.h \
-    headers/linker.h
+    headers/NRICP.h
 
 INCLUDEPATH +=./headers
 

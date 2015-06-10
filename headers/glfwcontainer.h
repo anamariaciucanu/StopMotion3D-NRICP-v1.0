@@ -9,14 +9,10 @@
 /// and the procedures which will be performed on them
 ///@author Anamaria Ciucanu
 
-#include "logger.h"
 #include "matrix.h"
 #include "camera.h"
 #include "shader.h"
 #include "NRICP.h"
-#include "linker.h"
-
-//TO DO: include text
 
 using namespace std;
 
@@ -32,21 +28,14 @@ class GLFWContainer
     float m_objXRot;
     float m_objYRot;
     float m_objZRot;
- ///@brief Pointer to singleton Logger class object, which prints errors and configuration details to a log file
-    Logger* m_logger;
  ///@brief Pointer to GLFW window where OpenGL drawing occurs
     GLFWwindow* m_window;
  ///@brief Pointer to an array of pointers to Mesh class objects
     Mesh** m_mesh;
- ///@brief Pointer to an array of pointers to Segmentation class objects
-    Segmentation** m_segmentation;
  ///@brief Pointer to NRICP class object, which contains the nonrigid iterative closest point algorithm implementation for
  /// pose matching between any two meshes from the mesh array
     NRICP* m_nrICP;
- ///@brief Linkers between meshes and their segmentation
-    Linker** m_linker;
  ///@brief Unsigned integer variable holding the number of meshes introduced in the mesh array
- /// Same as segmentation count
     unsigned int m_meshCount;
  ///@brief Unsigned integer variable determining the index from the mesh array of the currently active mesh
  /// This is used for the vertex selection method starting with the mouse click callback function from the main function
@@ -59,8 +48,6 @@ class GLFWContainer
     mat4 m_modelMat;
     mat4 m_viewMat;
     mat4 m_projMat;
-///@brief Segmentation mode active or not
-    bool m_segmentationMode;
 
 
  public:
@@ -91,7 +78,7 @@ class GLFWContainer
     void update_fps_counter();
  ///@brief prints the camera position in the title bar every 0.2 seconds
     void update_camera_position();
- ///@brief updates titlebar with stiffness and segmentation mode values
+ ///@brief updates titlebar with stiffness
     void update_titlebar();
  ///@brief prints the OpenGL version
     void printConfiguration();
@@ -106,7 +93,6 @@ class GLFWContainer
     int getWidth(){ return m_gl_width; }
     void setHeight(int _height){ m_gl_height = _height; }
     int getHeight(){ return m_gl_height; }
-    Logger* getLogger(){ return m_logger; }
     mat4 getModelMatrix() { return m_modelMat; }
     mat4 getProjMatrix(){ return m_projMat; }
     mat4 getViewMatrix(){ return m_viewMat; }
@@ -116,15 +102,21 @@ class GLFWContainer
     void setClickActiveMeshIndex(unsigned int _click) { m_clickActiveMeshIndex = _click; }
     unsigned int getClickActiveMeshIndex() { return m_clickActiveMeshIndex; }
     Mesh* getClickActiveMesh() { return m_mesh[m_clickActiveMeshIndex]; }
-    Segmentation* getClickActiveSegmentation() { return m_segmentation[m_clickActiveMeshIndex]; }
     bool getWireframe() {  return m_mesh[m_clickActiveMeshIndex]->isWireframe(); }
     void setWireframe(bool _value)
     {
         m_mesh[m_clickActiveMeshIndex]->setWireframe(_value);
     }
-    bool isSegmentationMode() { return m_segmentationMode;}
-    void setSegmentationMode(bool _segmentationMode) { m_segmentationMode = _segmentationMode; }
-    void printCurvatureActiveVertex();
+
+    void printCurvatureActiveVertex()
+    {
+        Mesh* mesh = m_mesh[m_clickActiveMeshIndex];
+        int pickedIndex = mesh->getPickedVertexIndex();
+        float vertexCurvature = mesh->calculateVertexCurvature(pickedIndex);
+
+        printf("Curvature of vertex %i, of mesh %i is: ", pickedIndex, m_clickActiveMeshIndex);
+        printf(" %f \n", vertexCurvature);
+    }
 };
 
 #endif // MYGLFWWINDOW_H
