@@ -51,9 +51,9 @@ void calculateClickRay(double _mouseX, double _mouseY)
     Vector3f ray = Vector3f(ray_aux.v[0], ray_aux.v[1], ray_aux.v[2]);
 
     Mesh* activeMesh =  glfw_container->getClickActiveMesh();
-    //Segmentation* activeSegmentation = glfw_container->getClickActiveSegmentation();
+    Segmentation* activeSegmentation = glfw_container->getClickActiveSegmentation();
 
-    //if(!glfw_container->isSegmentationMode())
+    if(!glfw_container->isSegmentationMode())
     {
      int intersection = activeMesh->whereIsIntersectingMesh(true, -1, camera, ray);
 
@@ -61,9 +61,9 @@ void calculateClickRay(double _mouseX, double _mouseY)
      {
        activeMesh->setPickedVertexIndex(intersection);
        //TO DO: when selected, NRICP could be refreshed automatically...but a bit sensitive here?
-      // if(activeSegmentation->isVisible())
+       if(activeSegmentation->isVisible())
        {
-      //  activeSegmentation->setActiveSegment(activeSegmentation->findClosestSegment(intersection));
+        activeSegmentation->setActiveSegment(activeSegmentation->findClosestSegment(intersection));
        }
      }
     }
@@ -114,9 +114,9 @@ int main(){
 
 //Initialize window, callback functions and drawing functions
     glfw_container->initializeWindow();
-    glfwSetWindowSizeCallback(glfw_container->getWindow(), glfw_window_size_callback);
-    glfwSetMouseButtonCallback(glfw_container->getWindow(), mouseClickEvent);
-    glfwSetErrorCallback(glfw_error_callback);
+   // glfwSetWindowSizeCallback(glfw_container->getWindow(), glfw_window_size_callback);
+   // glfwSetMouseButtonCallback(glfw_container->getWindow(), mouseClickEvent);
+   // glfwSetErrorCallback(glfw_error_callback);
     glfw_container->initializeDrawing();
     glfw_container->loopDrawing();
 

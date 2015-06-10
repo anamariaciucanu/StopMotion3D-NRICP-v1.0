@@ -5,7 +5,7 @@ Segmentation::Segmentation(Mesh *_originalMesh)
 {
     m_originalMesh = _originalMesh;
     m_threshold = -10;
-    m_minVerts = 20;
+    m_minVerts = 30;
     m_vertCount = m_originalMesh->getVertCount();
     m_regions = 0;
     m_activeSegment = 0;

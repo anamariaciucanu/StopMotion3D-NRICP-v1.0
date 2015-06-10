@@ -347,6 +347,10 @@ void GLFWContainer::initializeDrawing()
     //drawing prefs
     glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
     glfwWindowHint(GLFW_SAMPLES, 4);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 
 
     //Load a scene ============================================================================
@@ -363,17 +367,16 @@ void GLFWContainer::initializeDrawing()
 
     //loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
-    /*
+  /*
      for(unsigned int i=0; i<m_meshCount; ++i)
     {
      m_segmentation[i] = new Segmentation(m_mesh[i]);
      m_segmentation[i]->segment();
      m_linker[i] = new Linker(m_mesh[i], m_segmentation[i]);
     }
-   */
+*/
 
     //Bind VAOs
-
 
     //Transformations =========================================================================
     //Model matrix
@@ -396,149 +399,12 @@ void GLFWContainer::initializeDrawing()
 
     //Shaders ===========================================================================
     m_shader = new Shader("../shaders/test.vert", "../shaders/test.frag");
+    m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
 
     //Matrix sending to shader ==========================================================
     m_shader->sendModelMatrixToShader(&m_modelMat);
     m_shader->sendViewMatrixToShader(&m_viewMat);
-    m_shader->sendProjMatrixToShader(&m_projMat);
-}
-
-void GLFWContainer::loopDrawing()
-{
-    m_camera->setMoved(false);
-    vec3 col1 = vec3(0.9, 0.6, 0.3);
-    vec3 col3 = vec3(0.0, 0.0, 0.0);
-
-    while (!glfwWindowShouldClose(m_window))
-    {
-      checkKeyPress();
-
-     //Update Model Matrix ==========================================================================
-      m_modelMat = identity_mat4();
-
-       mat4 Rx = rotate_x_deg(identity_mat4(),  m_objXRot);
-       mat4 Ry = rotate_y_deg(identity_mat4(),  m_objYRot);
-       mat4 Rz = rotate_z_deg(identity_mat4(),  m_objZRot);
-       m_modelMat = Rz*Ry*Rx*m_modelMat;
-       m_shader->sendModelMatrixToShader(&m_modelMat);
-
-
-      //Update View matrix ==========================================================================
-      if(m_camera->isMoved())
-      {
-       mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
-       mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
-       m_viewMat = R*T;
-       m_camera->setMoved(false);
-       m_shader->sendViewMatrixToShader(&m_viewMat);
-      }
-
-    //General drawing loop ==========================================================================
-       update_titlebar();
-       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-       glViewport(0, 0, m_gl_width, m_gl_height);
-       glEnable(GL_CULL_FACE);
-       glEnable(GL_PROGRAM_POINT_SIZE);
-       glCullFace(GL_BACK);
-       glFrontFace(GL_CCW);
-
-
-       m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
-
-      //Draw segments for meshes
-
-       /*
-      for(unsigned int i = 0; i < m_meshCount; ++i)
-      {
-       if(m_segmentation[i]->isVisible())
-       {
-        unsigned int size_segs = m_segmentation[i]->getNumberOfSegments();
-
-        for(unsigned int j=0; j<size_segs; ++j)
-        {
-         Mesh* mesh = m_segmentation[i]->getMesh(j);
-         mesh->bindVAO1();
-
-         if(j == m_segmentation[i]->getActiveSegment())
-         {
-          col3.v[0] = 0.8;
-          col3.v[1] = 0.2;
-          col3.v[2] = 0.2;
-
-          m_shader->sendColourChoiceToShader(col3);
-          glBindVertexArray(mesh->getVAO1());
-          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-         }
-         else
-         {
-          col3.v[0] = 0.9;
-          col3.v[1] = 0.9;
-          col3.v[2] = 0.9;
-          m_shader->sendColourChoiceToShader(col3);
-          glBindVertexArray(mesh->getVAO1());
-          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);          
-         }
-        mesh->unbindVAO1();
-        }
-       }
-     }
-   */
-   //Draw meshes
-
-      for(unsigned int i=0; i<m_meshCount; ++i)
-      {
-       std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
-
-       col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);
-       m_shader->sendColourChoiceToShader(col1);
-       m_shader->sendPickedIndexToShader(m_mesh[i]->getPickedVertexIndex());
-       m_shader->sendLandmarkIndicesToShader(landmarks->size(), landmarks);
-       glUseProgram(m_shader->getShaderProgramme());
-
-       m_mesh[i]->bindVAO1();
-
-       glBindVertexArray(m_mesh[i]->getVAO1());
-       glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-
-       m_shader->sendLandmarkIndicesToShader(0, landmarks);
-       if(m_mesh[i]->isWireframe())
-       {
-        glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       }
-       else
-       {
-        glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       }
-
-        m_mesh[i]->unbindVAO1();
-      }
-
-
-
-    //Draw normals of template mesh ======================= template normals ===========================
-//      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
-//      m_mesh[0]->bindVAO2();
-//      glBindVertexArray(m_mesh[0]->getVAO2());
-//      glPointSize(5.0);
-//      glDrawArrays(GL_LINES, 0, m_nrICP->getTemplate()->getVertCount()*6);
-//      glDrawArrays(GL_POINTS, 0, m_nrICP->getTemplate()->getVertCount()*6);
-
-
-       //update input handling events
-       glfwPollEvents();
-
-       //Put stuff on display
-       glfwSwapBuffers(m_window);
-
-       //Exit on key press
-       if(GLFW_PRESS == glfwGetKey(m_window, GLFW_KEY_ESCAPE))
-        {
-         glfwSetWindowShouldClose(m_window, 1);
-        }
-    }
-
-    //close GL contextand any other GLFW resources
-    glfwTerminate();
+    m_shader->sendProjMatrixToShader(&m_projMat);    
 }
 
 void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _targetFile)
@@ -594,4 +460,143 @@ void GLFWContainer::printCurvatureActiveVertex()
 
     printf("Curvature of vertex %i, of mesh %i is: ", pickedIndex, m_clickActiveMeshIndex);
     printf(" %f \n", vertexCurvature);
+}
+
+
+//Drawing loop
+
+void GLFWContainer::loopDrawing()
+{
+    m_camera->setMoved(false);
+    vec3 col1 = vec3(0.9, 0.6, 0.3);
+    vec3 col3 = vec3(0.0, 0.0, 0.0);
+
+    while (!glfwWindowShouldClose(m_window))
+    {
+     // Chekup loops =================================================
+
+     // checkKeyPress();
+     // update_titlebar();
+
+     //General drawing loop ==========================================
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glViewport(0, 0, m_gl_width, m_gl_height);
+
+
+     //Update Model Matrix ===========================================
+      /*
+      m_modelMat = identity_mat4();
+
+      mat4 Rx = rotate_x_deg(identity_mat4(),  m_objXRot);
+      mat4 Ry = rotate_y_deg(identity_mat4(),  m_objYRot);
+      mat4 Rz = rotate_z_deg(identity_mat4(),  m_objZRot);
+      m_modelMat = Rz*Ry*Rx*m_modelMat;
+      m_shader->sendModelMatrixToShader(&m_modelMat);
+
+
+      //Update View matrix ===========================================
+      if(m_camera->isMoved())
+      {
+       mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
+       mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
+       m_viewMat = R*T;
+       m_camera->setMoved(false);
+       m_shader->sendViewMatrixToShader(&m_viewMat);
+      }
+*/
+
+      //Draw segments for meshes =====================================
+      /*
+      for(unsigned int i = 0; i < m_meshCount; ++i)
+      {
+       if(m_segmentation[i]->isVisible())
+       {
+        unsigned int size_segs = m_segmentation[i]->getNumberOfSegments();
+
+        for(unsigned int j=0; j<size_segs; ++j)
+        {
+         Mesh* mesh = m_segmentation[i]->getMesh(j);
+         mesh->bindVAO1();
+
+         if(j == m_segmentation[i]->getActiveSegment())
+         {
+          col3.v[0] = 0.8;
+          col3.v[1] = 0.2;
+          col3.v[2] = 0.2;
+
+          m_shader->sendColourChoiceToShader(col3);
+          glBindVertexArray(mesh->getVAO1());
+          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+         }
+         else
+         {
+          col3.v[0] = 0.9;
+          col3.v[1] = 0.9;
+          col3.v[2] = 0.9;
+          m_shader->sendColourChoiceToShader(col3);
+          glBindVertexArray(mesh->getVAO1());
+          glDrawElements(GL_TRIANGLES, mesh->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+         }
+        mesh->unbindVAO1();
+        }
+       }
+     }
+     */
+
+   //Draw meshes
+
+      for(unsigned int i=0; i<m_meshCount; ++i)
+      {
+      // std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
+
+       //col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);
+     //  m_shader->sendColourChoiceToShader(col1);
+    //   m_shader->sendPickedIndexToShader(m_mesh[i]->getPickedVertexIndex());
+     //  m_shader->sendLandmarkIndicesToShader(landmarks->size(), landmarks);
+   //    glUseProgram(m_shader->getShaderProgramme());
+
+       m_mesh[i]->bindVAO1();
+
+       glBindVertexArray(m_mesh[i]->getVAO1());
+       glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+
+     //  m_shader->sendLandmarkIndicesToShader(0, landmarks);
+       if(m_mesh[i]->isWireframe())
+       {
+        glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       }
+       else
+       {
+        glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+       }
+
+        m_mesh[i]->unbindVAO1();
+      }
+
+
+
+    //Draw normals of template mesh ======================= template normals ===========================
+//      m_shader->sendColourChoiceToShader(vec3(1.0, 1.0, 1.0));
+//      m_mesh[0]->bindVAO2();
+//      glBindVertexArray(m_mesh[0]->getVAO2());
+//      glPointSize(5.0);
+//      glDrawArrays(GL_LINES, 0, m_nrICP->getTemplate()->getVertCount()*6);
+//      glDrawArrays(GL_POINTS, 0, m_nrICP->getTemplate()->getVertCount()*6);
+
+
+       //update input handling events
+       glfwPollEvents();
+
+       //Put stuff on display
+       glfwSwapBuffers(m_window);
+
+       //Exit on key press
+       if(GLFW_PRESS == glfwGetKey(m_window, GLFW_KEY_ESCAPE))
+        {
+         glfwSetWindowShouldClose(m_window, 1);
+        }
+    }
+
+    //close GL contextand any other GLFW resources
+    glfwTerminate();
 }
