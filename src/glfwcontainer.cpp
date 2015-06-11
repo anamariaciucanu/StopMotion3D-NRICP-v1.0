@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string>
 #include <cstdlib>
+#include <unistd.h>
 
 GLFWContainer::GLFWContainer(int _width, int _height)
 {
@@ -250,71 +251,6 @@ void GLFWContainer::checkMeshIntersection(vec3 _ray)
   m_shader->sendCameraRayToShader(_ray);
 }
 
-void GLFWContainer::initializeDrawing()
-{
-    //Drawining inits =========================================================================
-    //start GLEW extension handler
-    glewExperimental = GL_TRUE;
-    glewInit();
-
-    //near clipping plane
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS); //smaller value as closer
-
-    //drawing prefs
-    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
-    glfwWindowHint(GLFW_SAMPLES, 4);
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_PROGRAM_POINT_SIZE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
-
-
-    //Load a scene ============================================================================
-    float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
-    //loadMesh("../models/Rob_TPose_LowRes_Clean.obj", transformations);
-    loadMesh("../models/HelliDropter1.obj", transformations);
-    transformations[3] = 0.7;
-    //loadMesh("../models/Rob_Frame2_LowRes_Clean.obj", transformations);
-    loadMesh("../models/HelliDropter2.obj", transformations);
-
-    //Nonrigid Iterative Closest Point ========================================================
-    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-    m_nrICP->initializeNRICP();
-
-    //loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
-
-    //Bind VAOs
-
-    //Transformations =========================================================================
-    //Model matrix
-    //column major matrix - that's how shaders prefer it
-     m_modelMat = identity_mat4();
-
-    //View matrix
-    mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
-    mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
-    m_viewMat = R*T;
-
-    //Projection matrix
-    //Change when resizing window
-    m_projMat = mat4(
-         m_camera->getSx(), 0.0f, 0.0f, 0.0f,
-         0.0f, m_camera->getSy(), 0.0f, 0.0f,
-         0.0f, 0.0f, m_camera->getSz(), -1.0f,
-         0.0f, 0.0f, m_camera->getPz(), 0.0f
-     );
-
-    //Shaders ===========================================================================
-    m_shader = new Shader("../shaders/test.vert", "../shaders/test.frag");
-    m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
-
-    //Matrix sending to shader ==========================================================
-    m_shader->sendModelMatrixToShader(&m_modelMat);
-    m_shader->sendViewMatrixToShader(&m_viewMat);
-    m_shader->sendProjMatrixToShader(&m_projMat);    
-}
-
 void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _targetFile)
 {
     ifstream in1(_templateFile, ios::in);
@@ -362,8 +298,72 @@ void GLFWContainer::printConfiguration()
 
 
 
+//Drawing init and loop
 
-//Drawing loop
+void GLFWContainer::initializeDrawing()
+{
+    //Drawining inits =========================================================================
+    //start GLEW extension handler
+    glewExperimental = GL_TRUE;
+    glewInit();
+
+    //near clipping plane
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS); //smaller value as closer
+
+    //drawing prefs
+    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
+
+    //Load a scene ============================================================================
+    float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
+    //loadMesh("../models/Cube1.obj", transformations);
+    loadMesh("../models/HelliDropter1.obj", transformations);
+    transformations[3] = 0.7;
+    //loadMesh("../models/Cube2.obj", transformations);
+    loadMesh("../models/HelliDropter2.obj", transformations);
+
+    //Nonrigid Iterative Closest Point ========================================================
+    m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+    m_nrICP->initializeNRICP();
+
+    //loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+
+    //Bind VAOs
+
+    //Transformations =========================================================================
+    //Model matrix
+    //column major matrix - that's how shaders prefer it
+     m_modelMat = identity_mat4();
+
+    //View matrix
+    mat4 T = translate(identity_mat4(), vec3(-m_camera->x(), -m_camera->y(), -m_camera->z()));
+    mat4 R = rotate_y_deg(identity_mat4(), -m_camera->getYaw());
+    m_viewMat = R*T;
+
+    //Projection matrix
+    //Change when resizing window
+    m_projMat = mat4(
+         m_camera->getSx(), 0.0f, 0.0f, 0.0f,
+         0.0f, m_camera->getSy(), 0.0f, 0.0f,
+         0.0f, 0.0f, m_camera->getSz(), -1.0f,
+         0.0f, 0.0f, m_camera->getPz(), 0.0f
+     );
+
+    //Shaders ===========================================================================
+    m_shader = new Shader("../shaders/test.vert", "../shaders/test.frag");
+    m_shader->sendColourPickedToShader(vec3(0.8, 0.1, 0.1));
+
+    //Matrix sending to shader ==========================================================
+    m_shader->sendModelMatrixToShader(&m_modelMat);
+    m_shader->sendViewMatrixToShader(&m_viewMat);
+    m_shader->sendProjMatrixToShader(&m_projMat);
+}
 
 void GLFWContainer::loopDrawing()
 {
@@ -373,7 +373,7 @@ void GLFWContainer::loopDrawing()
     {
      // Chekup loops =================================================
 
-     // checkKeyPress();
+      checkKeyPress();
      // update_titlebar();
 
      //General drawing loop ==========================================
@@ -382,7 +382,6 @@ void GLFWContainer::loopDrawing()
 
 
      //Update Model Matrix ===========================================
-
       m_modelMat = identity_mat4();
 
       mat4 Rx = rotate_x_deg(identity_mat4(),  m_objXRot);
@@ -405,33 +404,34 @@ void GLFWContainer::loopDrawing()
 
      //Draw meshes
 
-      for(unsigned int i=0; i<m_meshCount; ++i)
-      {
-       std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
+          for(unsigned int i=0; i<m_meshCount; ++i)
+          {
+           std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
 
-       vec3 col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);
-       m_shader->sendColourChoiceToShader(col1);
-       m_shader->sendPickedIndexToShader(m_mesh[i]->getPickedVertexIndex());
-       m_shader->sendLandmarkIndicesToShader(landmarks->size(), landmarks);
-       glUseProgram(m_shader->getShaderProgramme());
+           vec3 col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);
+           m_shader->sendColourChoiceToShader(col1);
+           m_shader->sendPickedIndexToShader(m_mesh[i]->getPickedVertexIndex());
+           m_shader->sendLandmarkIndicesToShader(landmarks->size(), landmarks);
+           glUseProgram(m_shader->getShaderProgramme());
 
-       m_mesh[i]->bindVAO1();
+           m_mesh[i]->bindVAO1();
 
-       glBindVertexArray(m_mesh[i]->getVAO1());
-       glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+           glBindVertexArray(m_mesh[i]->getVAO1());
+           glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
 
-       m_shader->sendLandmarkIndicesToShader(0, landmarks);
-       if(m_mesh[i]->isWireframe())
-       {
-        glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       }
-       else
-       {
-        glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-       }
+           m_shader->sendLandmarkIndicesToShader(0, landmarks);
+           if(m_mesh[i]->isWireframe())
+           {
+            glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+           }
+           else
+           {
+            glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+           }
 
-        m_mesh[i]->unbindVAO1();
-      }
+            m_mesh[i]->unbindVAO1();
+          }
+
 
        //update input handling events
        glfwPollEvents();
@@ -444,6 +444,8 @@ void GLFWContainer::loopDrawing()
         {
          glfwSetWindowShouldClose(m_window, 1);
         }
+
+       usleep(5000);
     }
 
     //close GL contextand any other GLFW resources

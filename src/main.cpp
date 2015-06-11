@@ -79,15 +79,11 @@ void mouseClickEvent(GLFWwindow *_window, int _button, int _action, int _mods)
    glfwGetCursorPos(_window, &xpos, &ypos);
    calculateClickRay(xpos, ypos);
   }
-   if(_button == GLFW_MOUSE_BUTTON_2 && _action == GLFW_PRESS)
-   {
-    glfw_container->setWireframe(!glfw_container->getWireframe());
-   }
 
-   if(_button == GLFW_MOUSE_BUTTON_3 && _action == GLFW_PRESS)
-   {
-    glfw_container->printCurvatureActiveVertex();
-   }
+  if(_button == GLFW_MOUSE_BUTTON_2 && _action == GLFW_PRESS)
+  {
+   glfw_container->setWireframe(!glfw_container->getWireframe());
+  }
 }
 
 
@@ -100,9 +96,8 @@ int main(){
 
 //Initialize window, callback functions and drawing functions
     glfw_container->initializeWindow();
-   // glfwSetWindowSizeCallback(glfw_container->getWindow(), glfw_window_size_callback);
-   // glfwSetMouseButtonCallback(glfw_container->getWindow(), mouseClickEvent);
-   // glfwSetErrorCallback(glfw_error_callback);
+    glfwSetWindowSizeCallback(glfw_container->getWindow(), glfw_window_size_callback);
+    glfwSetMouseButtonCallback(glfw_container->getWindow(), mouseClickEvent);
     glfw_container->initializeDrawing();
     glfw_container->loopDrawing();
 

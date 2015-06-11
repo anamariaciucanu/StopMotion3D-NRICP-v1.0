@@ -1,8 +1,6 @@
 #include "shader.h"
 #include "load_functions.h"
 
-
-
 Shader::Shader(const char *_fileVertexShader, const char *_fileFragmentShader)
 {
  loadVertexShader(_fileVertexShader);

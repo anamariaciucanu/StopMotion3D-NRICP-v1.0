@@ -3,7 +3,8 @@
 
 #ifndef SHADER_H
 #define SHADER_H
-#include "logger.h"
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 #include "matrix.h"
 #include <vector>
 
@@ -13,7 +14,6 @@ private:
    GLuint m_vertexShader;
    GLuint m_fragmentShader;
    GLuint m_shaderProgramme;
-   Logger* m_logger;
 
 public:
     Shader(const char* _fileVertexShader, const char* _fileFragmentShader);

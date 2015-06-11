@@ -9,9 +9,9 @@
 /// and the procedures which will be performed on them
 ///@author Anamaria Ciucanu
 
+#include "shader.h"
 #include "matrix.h"
 #include "camera.h"
-#include "shader.h"
 #include "NRICP.h"
 
 using namespace std;

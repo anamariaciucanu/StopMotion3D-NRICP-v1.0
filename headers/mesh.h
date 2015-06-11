@@ -13,8 +13,9 @@
 ///@brief Mesh class containing the geometry to be drawn in the scene
 ///@author Anamaria Ciucanu
 
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 #include <Eigen>
-#include "logger.h"
 #include "matrix.h"
 #include <stdlib.h>
 #include <stdio.h>

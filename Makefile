@@ -478,7 +478,6 @@ obj/main.o: src/main.cpp headers/glfwcontainer.h \
 		headers/matrix.h \
 		headers/camera.h \
 		headers/shader.h \
-		headers/logger.h \
 		headers/NRICP.h \
 		headers/mesh.h \
 		../../../Libs/eigen_1/Eigen/Eigen \
@@ -750,7 +749,6 @@ obj/glfwcontainer.o: src/glfwcontainer.cpp headers/glfwcontainer.h \
 		headers/matrix.h \
 		headers/camera.h \
 		headers/shader.h \
-		headers/logger.h \
 		headers/NRICP.h \
 		headers/mesh.h \
 		../../../Libs/eigen_1/Eigen/Eigen \
@@ -1016,7 +1014,6 @@ obj/glfwcontainer.o: src/glfwcontainer.cpp headers/glfwcontainer.h \
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/glfwcontainer.o src/glfwcontainer.cpp
 
 obj/shader.o: src/shader.cpp headers/shader.h \
-		headers/logger.h \
 		headers/matrix.h \
 		headers/load_functions.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/shader.o src/shader.cpp
@@ -1282,7 +1279,6 @@ obj/mesh.o: src/mesh.cpp headers/mesh.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
-		headers/logger.h \
 		headers/matrix.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/mesh.o src/mesh.cpp
 
@@ -1548,7 +1544,6 @@ obj/NRICP.o: src/NRICP.cpp headers/NRICP.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
-		headers/logger.h \
 		headers/matrix.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/NRICP.o src/NRICP.cpp
 

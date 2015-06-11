@@ -32,6 +32,8 @@ OTHER_FILES+= shaders/test.vert \
 #Dependencies and Libraries  ===============================================================================
 LIBS += -L./libs -lGLEW -lglfw3
 LIBS += -L/usr/local/lib -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lm -lXinerama -lXcursor
+
+#Fonts
 #-llibfreetype
 
 
@@ -45,5 +47,5 @@ DEPENDPATH += $$PWD/../../../Libs/eigen_1/Eigen
 QMAKE_CXXFLAGS += -fopenmp
 QMAKE_LIBS += -lgomp
 
-#Fonts
+
 

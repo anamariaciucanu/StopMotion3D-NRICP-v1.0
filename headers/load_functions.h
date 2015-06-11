@@ -5,6 +5,8 @@
 ///@brief loads text from files, used mostly for shaders
 ///@author Web
 
+#include <stdio.h>
+#include <cstdlib>
 
 ///@brief loads text from file
 ///@param [in] _filename -> the file to be opened and read
