@@ -203,7 +203,9 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
      m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position[2];
     }
 
+    rotateObject(_transformations[0], _transformations[1], _transformations[2]);
     moveObject(_transformations[3], _transformations[4], _transformations[5]);
+
     //calculateNormals();
     // buildVertexNormalVector();
 

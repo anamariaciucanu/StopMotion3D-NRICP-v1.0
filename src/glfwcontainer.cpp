@@ -216,7 +216,8 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
       m_nrICP->addLandmarkCorrespondence();
-      m_nrICP->setLandmarkCorrespChanged(true);     
+      m_nrICP->setLandmarkCorrespChanged(true);
+      sleep(1.0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_K)){
@@ -321,18 +322,22 @@ void GLFWContainer::initializeDrawing()
 
 
     //Load a scene ============================================================================
-    float transformations[6] = {0.0, 0.0, 0, -0.7, 0.0, 0.0};
+    float transformations[6] = {0.0, -60, 0.0, -0.0, 0.1, 0.0};
     //loadMesh("../models/Cube1.obj", transformations);
-    loadMesh("../models/HelliDropter1.obj", transformations);
-    transformations[3] = 0.7;
+    //loadMesh("../models/HelliDropter1.obj", transformations);
+    loadMesh("../models/Propeller.obj", transformations);
+    //transformations[3] = 0.7;
+    transformations[4] = 0.0;
+    transformations[1] = 60;
     //loadMesh("../models/Cube2.obj", transformations);
-    loadMesh("../models/HelliDropter2.obj", transformations);
+    //loadMesh("../models/HelliDropter2.obj", transformations);
+    loadMesh("../models/Propeller.obj", transformations);
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
     m_nrICP->initializeNRICP();
 
-    //loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
     //Bind VAOs
 
@@ -374,7 +379,7 @@ void GLFWContainer::loopDrawing()
      // Chekup loops =================================================
 
       checkKeyPress();
-     // update_titlebar();
+      update_titlebar();
 
      //General drawing loop ==========================================
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
