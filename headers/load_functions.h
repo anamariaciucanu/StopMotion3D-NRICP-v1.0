@@ -37,6 +37,28 @@ char* file_read(const char* _filename)
 }
 
 
+//Aux functions/bits, commented out
+/*
+    printf("Eigenvectors: \n");
+    for(unsigned int i=0; i<3; ++i)
+    {
+        for(unsigned int j=0; j<3; ++j)
+        {
+            printf(" %f ", m_eigenvectors(i, j));
+        }
+        printf("\n");
+    }
+
+    printf("rotation matrix: \n");
+    for(unsigned int i=0; i<3; ++i)
+    {
+        for(unsigned int j=0; j<3; ++j)
+        {
+            printf(" %f ", m_eigenvectors(i, j));
+        }
+        printf("\n");
+    }
+*/
 
 
 

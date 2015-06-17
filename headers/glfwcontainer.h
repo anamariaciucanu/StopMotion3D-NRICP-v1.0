@@ -65,7 +65,7 @@ class GLFWContainer
  ///@brief loads a mesh from the obj file
  ///@param [in] _fileName -> name of the obj file where the mesh was saved
  ///@param [in] _transformations -> array of initial transformations applied to the mesh
-    void loadMesh(const char *_fileName, float *_transformations);
+    void loadMesh(const char *_fileName);
  ///@brief brings the meshes in the Mesh array to the [-1,1]^3 coordinates
     void normaliseMeshes();
  ///@brief the OpenGL drawing loop

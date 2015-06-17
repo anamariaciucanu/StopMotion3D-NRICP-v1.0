@@ -475,9 +475,9 @@ compiler_clean:
 ####### Compile
 
 obj/main.o: src/main.cpp headers/glfwcontainer.h \
+		headers/shader.h \
 		headers/matrix.h \
 		headers/camera.h \
-		headers/shader.h \
 		headers/NRICP.h \
 		headers/mesh.h \
 		../../../Libs/eigen_1/Eigen/Eigen \
@@ -746,9 +746,9 @@ obj/matrix.o: src/matrix.cpp headers/matrix.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/matrix.o src/matrix.cpp
 
 obj/glfwcontainer.o: src/glfwcontainer.cpp headers/glfwcontainer.h \
+		headers/shader.h \
 		headers/matrix.h \
 		headers/camera.h \
-		headers/shader.h \
 		headers/NRICP.h \
 		headers/mesh.h \
 		../../../Libs/eigen_1/Eigen/Eigen \

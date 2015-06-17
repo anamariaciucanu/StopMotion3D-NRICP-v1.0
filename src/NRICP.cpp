@@ -165,15 +165,23 @@ void NRICP::clearLandmarkCorrespondences()
 
 void NRICP::calculateRigidTransformation()
 {
-    float previous_seconds = glfwGetTime();
+    //float previous_seconds = glfwGetTime();
 
-    determineRigidOptimalDeformation();
-    deformTemplate();
+    //Approximates ICP, unstable
+    //determineRigidOptimalDeformation();
+    //deformTemplate();
+    //printf(" ICP takes %f seconds \n ", elapsed_seconds);
 
-    float current_seconds = glfwGetTime();
-    float elapsed_seconds = current_seconds - previous_seconds;
+    //PCA
+    //m_template->moveToCentre();
+   // m_target->moveToCentre();
+    reorientByEigenvectors();
 
-    printf(" ICP takes %f seconds \n ", elapsed_seconds);
+    //m_template->rotateByEigenVectors();
+    //m_target->rotateByEigenVectors();
+
+    //float current_seconds = glfwGetTime();
+    //float elapsed_seconds = current_seconds - previous_seconds;
 }
 
 void NRICP::calculateNonRigidTransformation()
@@ -588,6 +596,14 @@ float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
       return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
   }
 
+void NRICP::reorientByEigenvectors()
+{
+    Matrix3f eigenMat1 = m_template->getEigenMatrix();
+    Matrix3f eigenMat2 = m_target->getEigenMatrix();
+
+    Matrix3f R = eigenMat2 * eigenMat1.inverse();
+    m_template->rotateObject(R);
+}
 
 
 

@@ -7,6 +7,8 @@
 //TO DO: Fix normals issue (normal count >> vert count?)
 //Temp fix: Calculate my own normals when loading mesh
 
+using namespace Eigen;
+
 Mesh::Mesh()
 {
     m_vertices = new std::vector<GLfloat>();
@@ -93,7 +95,7 @@ void Mesh::setVertex(unsigned int _vertNo, Vector3f _value)
     }
 }
 
-bool Mesh::loadMesh(const char *_fileName, float* _transformations)
+bool Mesh::loadMesh(const char *_fileName)
 {    
     ifstream in(_fileName, ios::in);
     if (!in)
@@ -193,21 +195,18 @@ bool Mesh::loadMesh(const char *_fileName, float* _transformations)
 
           continue;
         }
-     }
+     }    
+
     m_position = m_position/m_vertCount;
+    unsigned int three_i;
 
-    for(unsigned int i=0; i<m_vertCount; i++)
+    for(unsigned int i = 0; i < m_vertCount; i++)
     {
-     m_vertices->at(3*i) = m_vertices->at(3*i) - m_position[0];
-     m_vertices->at(3*i+1) = m_vertices->at(3*i+1) - m_position[1];
-     m_vertices->at(3*i+2) = m_vertices->at(3*i+2) - m_position[2];
+      three_i = 3*i;
+      m_vertices->at(three_i) = m_vertices->at(three_i) - m_position[0];
+      m_vertices->at(three_i + 1) = m_vertices->at(three_i + 1) - m_position[1];
+      m_vertices->at(three_i + 2) = m_vertices->at(three_i + 2) - m_position[2];
     }
-
-    rotateObject(_transformations[0], _transformations[1], _transformations[2]);
-    moveObject(_transformations[3], _transformations[4], _transformations[5]);
-
-    //calculateNormals();
-    // buildVertexNormalVector();
 
     return true;
 }
@@ -428,7 +427,6 @@ void Mesh::bindVAO1()
 */
 }
 
-
 void Mesh::unbindVAO1()
 {
  glDeleteBuffers(1, &m_vbo1Position);
@@ -436,7 +434,6 @@ void Mesh::unbindVAO1()
  glDeleteBuffers(1, &m_vbo1Normals);
  glDeleteVertexArrays(1, &m_vao1);
 }
-
 
 void Mesh::buildArcNodeMatrix()
 {
@@ -647,53 +644,6 @@ float Mesh::calculateVertexCurvature(int _index)
      return curvature;
 }
 
-
-void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
-{
-  int three_i;
-  mat4 Rx = rotate_x_deg(identity_mat4(), _angleX);
-  mat4 Ry= rotate_y_deg(identity_mat4(), _angleY);
-  mat4 Rz = rotate_z_deg(identity_mat4(), _angleZ);
-  vec4 vertex;
-  vertex.v[3] = 1.0;
-
-  for(unsigned int i=0; i<m_vertCount; ++i)
-  {
-     three_i = 3*i;
-     vertex.v[0] = m_vertices->at(three_i);
-     vertex.v[1] = m_vertices->at(three_i + 1);
-     vertex.v[2] = m_vertices->at(three_i + 2);
-
-     vertex = Rz * Ry * Rx * vertex;
-
-     m_vertices->at(three_i) = vertex.v[0];
-     m_vertices->at(three_i + 1) = vertex.v[1];
-     m_vertices->at(three_i + 2) = vertex.v[2];
-  }
-}
-
-void Mesh::moveObject(float _tX, float _tY, float _tZ)
-{
-  int three_i;
-  mat4 T = translate(identity_mat4(), vec3(_tX, _tY, _tZ));
-  vec4 vertex;
-  vertex.v[3] = 1.0;
-
-  for(unsigned int i=0; i<m_vertCount; ++i)
-  {
-     three_i = 3*i;
-     vertex.v[0] = m_vertices->at(three_i);
-     vertex.v[1] = m_vertices->at(three_i + 1);
-     vertex.v[2] = m_vertices->at(three_i + 2);
-
-     vertex = T * vertex;
-
-     m_vertices->at(three_i) = vertex.v[0];
-     m_vertices->at(three_i + 1) = vertex.v[1];
-     m_vertices->at(three_i + 2) = vertex.v[2];
-  }
-}
-
 int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vector3f _origin, Vector3f _ray)
 {
  ///@ref Fast, Minimum Storage Ray/Triangle Intersection, Möller & Trumbore. Journal of Graphics Tools, 1997.
@@ -858,6 +808,203 @@ float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
 
  return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
 }
+
+void Mesh::calculateEigenvectors()
+{
+    Matrix3f covarianceMatrix;
+    covarianceMatrix.setZero();
+    unsigned int three_i;
+    Vector3f v;
+
+    //Covariance Matrix
+    for(unsigned int i=0; i<m_vertCount; ++i)
+    {
+       three_i = 3*i;
+       v[0] = m_vertices->at(three_i) - m_position[0];
+       v[1] = m_vertices->at(three_i+1) - m_position[1];
+       v[2] = m_vertices->at(three_i+2) - m_position[2];
+
+       for(unsigned int j=0; j<3; ++j)
+       {
+         for(unsigned int k=0; k<3; ++k)
+         {
+           covarianceMatrix(j, k) = covarianceMatrix(j, k) + v[j]*v[k];
+         }
+       }
+    }
+    covarianceMatrix /= (m_vertCount-1);
+
+    SelfAdjointEigenSolver<Matrix3f> es;
+    es.compute(covarianceMatrix);
+
+    //Eigenvectors and eigenvalues
+    m_eigenvectors = es.eigenvectors();
+    m_eigenvalues = es.eigenvalues();
+}
+
+void Mesh::moveObject(float _tX, float _tY, float _tZ)
+{
+  int three_i;
+  mat4 T = translate(identity_mat4(), vec3(_tX, _tY, _tZ));
+  vec4 vertex;
+  vertex.v[3] = 1.0;
+
+  for(unsigned int i=0; i<m_vertCount; ++i)
+  {
+     three_i = 3*i;
+     vertex.v[0] = m_vertices->at(three_i);
+     vertex.v[1] = m_vertices->at(three_i + 1);
+     vertex.v[2] = m_vertices->at(three_i + 2);
+
+     vertex = T * vertex;
+
+     m_vertices->at(three_i) = vertex.v[0];
+     m_vertices->at(three_i + 1) = vertex.v[1];
+     m_vertices->at(three_i + 2) = vertex.v[2];
+  }
+
+  calculatePosition();
+}
+
+void Mesh::moveToCentre()
+{
+    moveObject(m_position[0], m_position[1], m_position[2]);
+}
+
+void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
+{
+  unsigned int three_i;
+  mat4 Rx = rotate_x_deg(identity_mat4(), _angleX);
+  mat4 Ry= rotate_y_deg(identity_mat4(), _angleY);
+  mat4 Rz = rotate_z_deg(identity_mat4(), _angleZ);
+  mat4 R = Rz * Ry * Rx;
+  vec4 vertex;
+  vertex.v[3] = 1.0;
+
+  for(unsigned int i=0; i<m_vertCount; ++i)
+  {
+     three_i = 3*i;
+     vertex.v[0] = m_vertices->at(three_i);
+     vertex.v[1] = m_vertices->at(three_i + 1);
+     vertex.v[2] = m_vertices->at(three_i + 2);
+
+     vertex = R * vertex;
+
+     m_vertices->at(three_i) = vertex.v[0];
+     m_vertices->at(three_i + 1) = vertex.v[1];
+     m_vertices->at(three_i + 2) = vertex.v[2];
+  }
+}
+
+void Mesh::rotateObject(Matrix3f _R)
+{
+    unsigned int three_i;
+    Vector3f vertex;
+
+    for(unsigned int i=0; i<m_vertCount; ++i)
+    {
+       three_i = 3*i;
+       vertex[0] = m_vertices->at(three_i);
+       vertex[1] = m_vertices->at(three_i + 1);
+       vertex[2] = m_vertices->at(three_i + 2);
+
+       vertex = _R * vertex;
+
+       m_vertices->at(three_i) = vertex[0];
+       m_vertices->at(three_i + 1) = vertex[1];
+       m_vertices->at(three_i + 2) = vertex[2];
+    }
+}
+
+bool Mesh::areEigenvectorsOrthogonal()
+{
+    Vector3f v1;
+    Vector3f v2;
+    Vector3f v3;
+
+    v1[0] = m_eigenvectors(0, 0);
+    v1[1] = m_eigenvectors(1, 0);
+    v1[2] = m_eigenvectors(2, 0);
+
+    v2[0] = m_eigenvectors(0, 1);
+    v2[1] = m_eigenvectors(1, 1);
+    v2[2] = m_eigenvectors(2, 1);
+
+    v3[0] = m_eigenvectors(0, 2);
+    v3[1] = m_eigenvectors(1, 2);
+    v3[2] = m_eigenvectors(2, 2);
+
+    double dot12 = v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
+    double dot23 = v2[0]*v3[0] + v2[1]*v3[1] + v2[2]*v3[2];
+
+    bool isDot12 = (dot12 < 0.1)&&(dot12 > -0.1);
+    bool isDot23 = (dot23 < 0.1)&&(dot23 > -0.1);
+
+    if(isDot12 && isDot23)
+    {
+      return true;
+    }
+
+    return false;
+}
+
+void Mesh::rotateByEigenVectors()
+{
+    //after moving to centre of OpenGL screen
+
+  if (areEigenvectorsOrthogonal())
+  {
+      Matrix3f A = m_eigenvectors;
+      Matrix3f R = A.inverse();
+
+      printf("Eigenvectors: \n");
+      for(unsigned int i=0; i<3; ++i)
+      {
+          for(unsigned int j=0; j<3; ++j)
+          {
+              printf(" %f ", m_eigenvectors(i, j));
+          }
+          printf("\n");
+      }
+
+      printf("rotation matrix: \n");
+      for(unsigned int i=0; i<3; ++i)
+      {
+          for(unsigned int j=0; j<3; ++j)
+          {
+              printf(" %f ", m_eigenvectors(i, j));
+          }
+          printf("\n");
+      }
+
+
+      Vector3f vertex;
+      int three_i;
+
+      for(unsigned int i=0; i<m_vertCount; ++i)
+      {
+        three_i = 3*i;
+
+        vertex[0] = m_vertices->at(three_i);
+        vertex[1] = m_vertices->at(three_i + 1);
+        vertex[2] = m_vertices->at(three_i + 2);
+
+        vertex = R * vertex;
+
+        m_vertices->at(three_i) = vertex[0];
+        m_vertices->at(three_i + 1) = vertex[1];
+        m_vertices->at(three_i + 2) = vertex[2];
+      }
+
+      calculatePosition();
+   }
+  else
+  {
+      //Eigenvectors are not orthonormal
+      //Build new ones?
+  }
+}
+
 
 void Mesh::calculatePosition()
 {

@@ -84,6 +84,9 @@ class Mesh
     bool m_wireframe;
 ///@brief Boolean value showing whether the mesh was modified during a NRICP/ICP method
     bool m_modified;
+///@Principal eigenvectors and eigenvalues
+    Matrix3f m_eigenvectors;
+    Vector3f m_eigenvalues;
 
  public:
  ///@brief ctor for Mesh class
@@ -94,7 +97,7 @@ class Mesh
  ///@param [in] _fileName -> the name of the file where the mesh is stored
  ///@param [in] _transformations -> an array of transformations the the mesh will undego before being drawn
  ///@param [out] boolean value representing the success of the mesh loading operation
-    bool loadMesh(const char* _fileName, float *_transformations);
+    bool loadMesh(const char* _fileName);
  ///@brief prints the landmarked vertex indices on the mesh to file
  ///@param [in] _fileName -> the name of the file where the indices will be printed
     void printLandmarkedPoints(const char* _fileName);
@@ -137,6 +140,9 @@ class Mesh
 ///@brief rotates mesh
 ///@param [in] _angleX, _angleY, _angleZ -> angles around X, Y and Z axes
     void rotateObject(float _angleX, float _angleY, float _angleZ);
+
+    void rotateObject(Matrix3f _R);
+
 ///@brief moves mesh
 /// @param [in] _tX, _tY, _tZ -> distances to be translated along X, Y and X axes
     void moveObject(float _tX, float _tY, float _tZ);
@@ -152,6 +158,14 @@ class Mesh
     void calculatePosition();
 ///@brief find if neighbour2 is in the list of neighbours of neighbour1
     bool findInListOfNeighbours(int _neighbour1, int _neighbour2);
+///@brief calculate principal eigenvectors
+    void calculateEigenvectors();
+///@brief Moves mesh to centre
+    void moveToCentre();
+///@brief Rotate using eigenvectors to principal axes
+    void rotateByEigenVectors();
+///@brief Checks if eigenvectors are perpendicular to each other
+    bool areEigenvectorsOrthogonal();
 
 /// Setters and Getters of the private members
     std::vector<GLfloat>* getVertices(){ return m_vertices; }
@@ -216,6 +230,11 @@ class Mesh
         m_faceIndices->push_back(_face[1]);
         m_faceIndices->push_back(_face[2]);
         m_faceCount++;
+    }
+
+    Matrix3f getEigenMatrix()
+    {
+        return m_eigenvectors;
     }
 
 };

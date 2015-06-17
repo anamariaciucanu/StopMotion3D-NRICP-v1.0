@@ -135,7 +135,7 @@ class NRICP
       {
           m_beta = 0.0;
       }
-    }
+    }    
     ///@brief Calculates the euclidean distance between two vertices
     ///@param [in] _v1, _v2 Vectors of size 3, representing the positions of vertices _v1 and _v2 respectively
     ///@param [out] Float variable -> the euclidean distance between the two vertices
@@ -144,6 +144,9 @@ class NRICP
     ///@param [in] _Xj_1, _Xj Dynamic matrices of floats -> transformation matricesfrom 2 consecutive iterations
     ///@param [out] Float variable representing the norm
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
+
+    void reorientByEigenvectors();
+
     /// Setters and Getters for the private members
     void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
     void setNRICPStarted(bool _value) { m_nricpStarted = _value; }
