@@ -145,8 +145,6 @@ class NRICP
     ///@param [out] Float variable representing the norm
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
 
-    void reorientByEigenvectors();
-
     /// Setters and Getters for the private members
     void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
     void setNRICPStarted(bool _value) { m_nricpStarted = _value; }

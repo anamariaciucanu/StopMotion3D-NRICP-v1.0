@@ -866,9 +866,14 @@ void Mesh::moveObject(float _tX, float _tY, float _tZ)
   calculatePosition();
 }
 
+void Mesh::moveObject(Vector3f _trans)
+{
+  moveObject(_trans[0], _trans[1], _trans[2]);
+}
+
 void Mesh::moveToCentre()
 {
-    moveObject(m_position[0], m_position[1], m_position[2]);
+   moveObject(-m_position[0], -m_position[1], -m_position[2]);
 }
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
@@ -894,6 +899,8 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
      m_vertices->at(three_i + 1) = vertex.v[1];
      m_vertices->at(three_i + 2) = vertex.v[2];
   }
+
+  calculatePosition();
 }
 
 void Mesh::rotateObject(Matrix3f _R)
@@ -914,6 +921,8 @@ void Mesh::rotateObject(Matrix3f _R)
        m_vertices->at(three_i + 1) = vertex[1];
        m_vertices->at(three_i + 2) = vertex[2];
     }
+
+    calculatePosition();
 }
 
 bool Mesh::areEigenvectorsOrthogonal()
@@ -955,29 +964,22 @@ void Mesh::rotateByEigenVectors()
   if (areEigenvectorsOrthogonal())
   {
       Matrix3f A = m_eigenvectors;
-      Matrix3f R = A.inverse();
+      Matrix3f B;
+      B.setZero();
 
-      printf("Eigenvectors: \n");
-      for(unsigned int i=0; i<3; ++i)
+      for(unsigned int k=0; k<3; ++k)
       {
-          for(unsigned int j=0; j<3; ++j)
-          {
-              printf(" %f ", m_eigenvectors(i, j));
-          }
-          printf("\n");
-      }
-
-      printf("rotation matrix: \n");
-      for(unsigned int i=0; i<3; ++i)
-      {
-          for(unsigned int j=0; j<3; ++j)
-          {
-              printf(" %f ", m_eigenvectors(i, j));
-          }
-          printf("\n");
+        for(unsigned int l=0; l<3; ++l)
+        {
+            if(abs(A(k,l)) > 0.8)
+            {
+              B(k,l) = 1.0;
+            }
+        }
       }
 
 
+      Matrix3f R = B*A.inverse();
       Vector3f vertex;
       int three_i;
 
@@ -1004,7 +1006,6 @@ void Mesh::rotateByEigenVectors()
       //Build new ones?
   }
 }
-
 
 void Mesh::calculatePosition()
 {

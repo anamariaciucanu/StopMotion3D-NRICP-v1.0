@@ -146,6 +146,7 @@ class Mesh
 ///@brief moves mesh
 /// @param [in] _tX, _tY, _tZ -> distances to be translated along X, Y and X axes
     void moveObject(float _tX, float _tY, float _tZ);
+    void moveObject(Vector3f _trans);
 ///@brief Normalise normals to [-1,1]^3 interval
     void normaliseNormals();
 ///@brief Euclidean distance between two vertices

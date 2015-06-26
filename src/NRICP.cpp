@@ -2,6 +2,8 @@
 
 //TO DO: m_landmarkCorrespChanged not used anywhere
 
+#include <OrderingMethods>
+
 NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
@@ -173,12 +175,15 @@ void NRICP::calculateRigidTransformation()
     //printf(" ICP takes %f seconds \n ", elapsed_seconds);
 
     //PCA
-    //m_template->moveToCentre();
-   // m_target->moveToCentre();
-    reorientByEigenvectors();
+    m_template->moveToCentre();
+    m_target->moveToCentre();
 
-    //m_template->rotateByEigenVectors();
-    //m_target->rotateByEigenVectors();
+    m_template->rotateByEigenVectors();
+    m_target->rotateByEigenVectors();
+
+    //TO DO: Fix hardcoded corrections
+    m_template->rotateObject(0, 90, 180);
+    m_target->rotateObject(0, -90, 0);
 
     //float current_seconds = glfwGetTime();
     //float elapsed_seconds = current_seconds - previous_seconds;
@@ -214,7 +219,6 @@ void NRICP::calculateNonRigidTransformation()
    float elapsed_seconds = current_seconds - previous_seconds;
    printf(" NRICP takes %f seconds \n ", elapsed_seconds);
 }
-
 
 float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
   {
@@ -371,7 +375,6 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
         // }
  }
 
-
 void NRICP::determineRigidOptimalDeformation()
 {
     //Find X = (At*A)-1 * At * B
@@ -442,7 +445,6 @@ void NRICP::determineRigidOptimalDeformation()
         m_stiffness = auxStiffness;
         solveLinearSystem();
 }
-
 
 void NRICP::determineNonRigidOptimalDeformation()
   {
@@ -546,6 +548,7 @@ void NRICP::determineNonRigidOptimalDeformation()
 
 void NRICP::solveLinearSystem()
 {
+    //TO DO: This is the slow bit of the algorithm...understand matrices better to optimize!
     //Important stuff down here
         m_A->makeCompressed();
         m_B->makeCompressed();
@@ -595,15 +598,6 @@ float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
 
       return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
   }
-
-void NRICP::reorientByEigenvectors()
-{
-    Matrix3f eigenMat1 = m_template->getEigenMatrix();
-    Matrix3f eigenMat2 = m_target->getEigenMatrix();
-
-    Matrix3f R = eigenMat2 * eigenMat1.inverse();
-    m_template->rotateObject(R);
-}
 
 
 
