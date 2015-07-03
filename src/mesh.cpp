@@ -1,6 +1,7 @@
 #include "mesh.h"
 #include <math.h>
 #include <boost/tokenizer.hpp>
+
 #define EPSILON 0.000001
 
 
@@ -28,7 +29,10 @@ Mesh::Mesh()
     m_pickedIndex = -1;
     m_wireframe = false;
     m_modified = false;
-    m_landmarkVertexIndices = new std::vector<int>();
+    m_landmarkVertexIndices = new std::vector<int>();   
+    m_segmentationRoot = NULL;
+    m_segmentationMode = false;
+    m_segmentsIndices = new std::vector<GLuint>();
 }
 
 Mesh::~Mesh()
@@ -77,6 +81,8 @@ Mesh::~Mesh()
  {
    delete [] m_landmarkVertexIndices;
  }
+
+ destroySegments(m_segmentationRoot);
 }
 
 void Mesh::setVertex(unsigned int _vertNo, Vector3f _value)
@@ -383,56 +389,70 @@ void Mesh::normaliseMesh()
     }
 }
 
-void Mesh::bindVAO1()
+void Mesh::bindVAOs()
 {
-    m_vao1 = 0;
-    glGenVertexArrays(1, &m_vao1);
-    glBindVertexArray(m_vao1);
+    //VAO
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
 
- //Copy mesh data into VBO ======================================================================
-    if(m_vertCount > 0)
+ //Bind those vertex positions
+  if(m_vertCount > 0)
     {
-        glGenBuffers(1, &m_vbo1Position);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vbo1Position);
-        glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount * sizeof(GLfloat), &m_vertices->at(0), GL_STATIC_DRAW);
-
-        glGenBuffers(1, &m_vbo1Indices);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo1Indices);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * m_faceCount*sizeof(GLuint), &m_faceIndices->at(0), GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL); //0 corresponds to vertex positions in VAO
-        glEnableVertexAttribArray(0);
+     glGenBuffers(1, &m_vboPositions);
+     glBindBuffer(GL_ARRAY_BUFFER, m_vboPositions);
+     glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount * sizeof(GLfloat), &m_vertices->at(0), GL_STATIC_DRAW);
+     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL); //0 corresponds to vertex positions in VAO
+     glEnableVertexAttribArray(0);
+    }
+  else
+    {
+     printf("ERROR: No vertices! \n");
+     return;
     }
 
-    if(m_normals->size() > 0)
+ //Bind those normals positions
+  if(m_normals->size() > 0)
     {
-        glGenBuffers(1, &m_vbo1Normals);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vbo1Normals);
-        glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount  * sizeof(GLfloat), &m_normals->at(0), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL); //1 corresponds to normals in VAO
-        glEnableVertexAttribArray(1);
+     glGenBuffers(1, &m_vboNormals);
+     glBindBuffer(GL_ARRAY_BUFFER, m_vboNormals);
+     glBufferData(GL_ARRAY_BUFFER, 3 * m_vertCount  * sizeof(GLfloat), &m_normals->at(0), GL_STATIC_DRAW);
+     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL); //1 corresponds to normals in VAO
+     glEnableVertexAttribArray(1);
+    }
+  else
+    {
+      printf("ERROR: No normals! \n");
+      return;
     }
 
-
-//Obs! 14 coordinates instead of 8
-/*
-    if(m_texCoordCount > 0)
+   if(m_vertCount > 0)
     {
-        glGenBuffers(1, &m_vboTextureCoord);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vboTextureCoord);
-        glBufferData(GL_ARRAY_BUFFER, 2 * m_texCoordCount * sizeof(GLfloat), &m_texcoords->at(0), GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, NULL); //2 corresponds to texture coordinates
-        glEnableVertexAttribArray(2);
+      if(!m_segmentationMode)
+      {
+       glGenBuffers(1, &m_vboIndices);
+       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vboIndices);
+       glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * m_faceCount * sizeof(GLuint), &m_faceIndices->at(0), GL_STATIC_DRAW);
+      }
+      else
+      {
+       glGenBuffers(1, &m_vboIndices);
+       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vboIndices);
+       glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_segmentsIndices->size() * sizeof(GLuint), &m_segmentsIndices->at(0), GL_STATIC_DRAW);
+      }
     }
-*/
+   else
+   {
+      printf("ERROR: No vertices! \n");
+      return;
+   }  
 }
 
-void Mesh::unbindVAO1()
+void Mesh::unbindVAOs()
 {
- glDeleteBuffers(1, &m_vbo1Position);
- glDeleteBuffers(1, &m_vbo1Indices);
- glDeleteBuffers(1, &m_vbo1Normals);
- glDeleteVertexArrays(1, &m_vao1);
+ glDeleteBuffers(1, &m_vboPositions);
+ glDeleteBuffers(1, &m_vboIndices);
+ glDeleteBuffers(1, &m_vboNormals);
+ glDeleteVertexArrays(1, &m_vao);
 }
 
 void Mesh::buildArcNodeMatrix()
@@ -809,39 +829,6 @@ float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
  return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
 }
 
-void Mesh::calculateEigenvectors()
-{
-    Matrix3f covarianceMatrix;
-    covarianceMatrix.setZero();
-    unsigned int three_i;
-    Vector3f v;
-
-    //Covariance Matrix
-    for(unsigned int i=0; i<m_vertCount; ++i)
-    {
-       three_i = 3*i;
-       v[0] = m_vertices->at(three_i) - m_position[0];
-       v[1] = m_vertices->at(three_i+1) - m_position[1];
-       v[2] = m_vertices->at(three_i+2) - m_position[2];
-
-       for(unsigned int j=0; j<3; ++j)
-       {
-         for(unsigned int k=0; k<3; ++k)
-         {
-           covarianceMatrix(j, k) = covarianceMatrix(j, k) + v[j]*v[k];
-         }
-       }
-    }
-    covarianceMatrix /= (m_vertCount-1);
-
-    SelfAdjointEigenSolver<Matrix3f> es;
-    es.compute(covarianceMatrix);
-
-    //Eigenvectors and eigenvalues
-    m_eigenvectors = es.eigenvectors();
-    m_eigenvalues = es.eigenvalues();
-}
-
 void Mesh::moveObject(float _tX, float _tY, float _tZ)
 {
   int three_i;
@@ -1007,6 +994,39 @@ void Mesh::rotateByEigenVectors()
   }
 }
 
+void Mesh::calculateEigenvectors()
+{
+    Matrix3f covarianceMatrix;
+    covarianceMatrix.setZero();
+    unsigned int three_i;
+    Vector3f v;
+
+    //Covariance Matrix
+    for(unsigned int i=0; i<m_vertCount; ++i)
+    {
+       three_i = 3*i;
+       v[0] = m_vertices->at(three_i) - m_position[0];
+       v[1] = m_vertices->at(three_i+1) - m_position[1];
+       v[2] = m_vertices->at(three_i+2) - m_position[2];
+
+       for(unsigned int j=0; j<3; ++j)
+       {
+         for(unsigned int k=0; k<3; ++k)
+         {
+           covarianceMatrix(j, k) = covarianceMatrix(j, k) + v[j]*v[k];
+         }
+       }
+    }
+    covarianceMatrix /= (m_vertCount-1);
+
+    SelfAdjointEigenSolver<Matrix3f> es;
+    es.compute(covarianceMatrix);
+
+    //Eigenvectors and eigenvalues
+    m_eigenvectors = es.eigenvectors();
+    m_eigenvalues = es.eigenvalues();
+}
+
 void Mesh::calculatePosition()
 {
     unsigned int three_i;
@@ -1027,4 +1047,300 @@ void Mesh::calculatePosition()
     m_position[1] /= m_vertCount;
     m_position[2] /= m_vertCount;
 }
+
+
+void Mesh::segmentMesh()
+{
+    unsigned int size = m_landmarkVertexIndices->size();
+
+    if(size >= 3)
+    {
+        Vector3i plane;
+        Vector3f normal;
+        Vector3f point1;
+        Vector3f point2;
+        Vector3f point3;
+
+        for(unsigned int i=0; i<3; ++i)
+        {
+          plane[i] = m_landmarkVertexIndices->at(size-1);
+          m_landmarkVertexIndices->pop_back();
+          size--;
+        }
+
+        for(unsigned int i=0; i<3; ++i)
+        {
+          point1[i] = m_vertices->at(3*plane[0] + i);
+          point2[i] = m_vertices->at(3*plane[1] + i);
+          point3[i] = m_vertices->at(3*plane[2] + i);
+        }
+
+        normal = (point2 - point1).cross(point3 - point1);
+        normal.normalize();
+
+        m_segmentationRoot = segmentationProcedure(plane, normal, m_segmentationRoot, m_segmentationRoot);
+        createSegmentList();
+        m_segmentationMode = true;
+    }
+    else
+    {
+      //Do nothing
+    }
+}
+
+Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation* _segment, Segmentation* _parent)
+{
+
+    if(_segment)
+    {
+       _segment->m_leftSegment = segmentationProcedure(_plane, _normal, _segment->m_leftSegment, _segment);
+       _segment->m_rightSegment = segmentationProcedure(_plane, _normal, _segment->m_rightSegment, _segment);
+    }
+
+    else
+    {
+     //Segment is null, so it will contain plane and new segments
+
+        Vector3i face;
+        Vector3f faceNormal;
+        Vector3f point1;
+        Vector3f point2;
+        Vector3f point3;
+        Vector3f planeCentre = calculateCentre(_plane[0], _plane[1], _plane[2]);
+        Vector3f faceCentre;
+        Vector3f planeFaceDirection;
+        unsigned int size;
+
+        _segment = new Segmentation();
+        _segment->m_plane = _plane;
+        _segment->m_visited = false;
+        _segment->m_leftFaces = new std::vector<GLuint>();
+        _segment->m_rightFaces = new std::vector<GLuint>();
+
+      if(_parent)
+        {
+        //Parent exists
+        //Left side
+            size = _parent->m_leftFaces->size();
+
+            for(unsigned int i=0; i<size/3; ++i)
+            {
+              face[0] = _parent->m_leftFaces->at(3*i);
+              face[1] = _parent->m_leftFaces->at(3*i + 1);
+              face[2] = _parent->m_leftFaces->at(3*i + 2);
+
+              faceCentre = calculateCentre(face[0], face[1], face[2]);
+
+             for(unsigned int j=0; j<3; ++j)
+             {
+               point1[j] = m_vertices->at(3*face[0] + j);
+               point2[j] = m_vertices->at(3*face[1] + j);
+               point3[j] = m_vertices->at(3*face[2] + j);
+             }
+
+             faceNormal = (point2 - point1).cross(point3 - point1);
+             faceNormal.normalize();
+             planeFaceDirection = faceCentre - planeCentre;
+             planeFaceDirection.normalize();
+
+             float dot_normals = _normal.dot(faceNormal);
+             float dot_directions = _normal.dot(planeFaceDirection);
+
+             if(dot_directions >= 0 && dot_directions <= 1)
+             {
+               //Above plane - segment left
+               _segment->m_leftFaces->push_back(face[0]);
+               _segment->m_leftFaces->push_back(face[1]);
+               _segment->m_leftFaces->push_back(face[2]);
+             }
+             else
+             {
+               //Below plane - segment right
+               _segment->m_rightFaces->push_back(face[0]);
+               _segment->m_rightFaces->push_back(face[1]);
+               _segment->m_rightFaces->push_back(face[2]);
+             }
+            }
+
+
+            //Right side
+             size = _parent->m_rightFaces->size();
+
+            for(unsigned int i=0; i<size/3; ++i)
+            {
+              face[0] = _parent->m_rightFaces->at(3*i);
+              face[1] = _parent->m_rightFaces->at(3*i + 1);
+              face[2] = _parent->m_rightFaces->at(3*i + 2);
+
+             for(unsigned int j=0; j<3; ++j)
+             {
+               point1[j] = m_vertices->at(3*face[0] + j);
+               point2[j] = m_vertices->at(3*face[1] + j);
+               point3[j] = m_vertices->at(3*face[2] + j);
+             }
+
+             faceNormal = (point2 - point1).cross(point3 - point1);
+             faceNormal.normalize();
+             planeFaceDirection = faceCentre - planeCentre;
+             planeFaceDirection.normalize();
+
+             float dot_normals = _normal.dot(faceNormal);
+             float dot_directions = _normal.dot(planeFaceDirection);
+
+             if(dot_directions >= 0 && dot_directions <= 1)
+             {
+               //Above plane - segment left
+               _segment->m_leftFaces->push_back(face[0]);
+               _segment->m_leftFaces->push_back(face[1]);
+               _segment->m_leftFaces->push_back(face[2]);
+             }
+             else
+             {
+               //Below plane - segment right
+               _segment->m_rightFaces->push_back(face[0]);
+               _segment->m_rightFaces->push_back(face[1]);
+               _segment->m_rightFaces->push_back(face[2]);
+             }
+            }
+
+            //Clear parent
+            _parent->m_leftFaces->clear();
+            _parent->m_rightFaces->clear();
+         }
+      else
+      {
+          size = m_faceIndices->size();
+
+          for(unsigned int i=0; i<m_faceCount; ++i)
+          {
+            face[0] = m_faceIndices->at(3*i);
+            face[1] = m_faceIndices->at(3*i + 1);
+            face[2] = m_faceIndices->at(3*i + 2);
+
+           for(unsigned int j=0; j<3; ++j)
+           {
+             point1[j] = m_vertices->at(3*face[0] + j);
+             point2[j] = m_vertices->at(3*face[1] + j);
+             point3[j] = m_vertices->at(3*face[2] + j);
+           }
+
+           faceNormal = (point2 - point1).cross(point3 - point1);
+           faceNormal.normalize();
+
+           float dot = _normal.dot(faceNormal);
+
+           if(dot >= 0.0 && dot <= 1)
+           {
+             //Above plane - segment left
+             _segment->m_leftFaces->push_back(face[0]);
+             _segment->m_leftFaces->push_back(face[1]);
+             _segment->m_leftFaces->push_back(face[2]);
+           }
+           else
+           {
+             //Below plane - segment right
+             _segment->m_rightFaces->push_back(face[0]);
+             _segment->m_rightFaces->push_back(face[1]);
+             _segment->m_rightFaces->push_back(face[2]);
+           }
+          }
+       }
+    }
+
+    return _segment;
+}
+
+void Mesh::createSegmentList()
+{
+  m_segments.clear();
+  m_segmentsIndices->clear();
+
+
+  std::vector<Segmentation*> stack;
+  Segmentation* current;
+  stack.push_back(m_segmentationRoot);
+
+
+  while(stack.size() > 0)
+  {
+      current = stack.back();
+
+      if(current->m_leftSegment != NULL && current->m_rightSegment != NULL)
+      {
+        if(!current->m_visited)
+        {
+          current->m_visited = true;
+          stack.push_back(current->m_leftSegment);
+          stack.push_back(current->m_rightSegment);
+        }
+        else
+        {
+          stack.pop_back();
+        }
+      }
+      else
+      {
+          m_segments.push_back(current->m_leftFaces);
+          m_segments.push_back(current->m_rightFaces);
+          stack.pop_back();
+      }
+  }
+
+  for(unsigned int i=0; i<m_segments.size(); ++i)
+  {
+      std::vector<GLuint>* segment = m_segments[i];
+      for(unsigned int j=0; j<segment->size(); ++j)
+      {
+        m_segmentsIndices->push_back(segment->at(j));
+      }
+  }
+}
+
+
+void Mesh::destroySegments(Segmentation* _segmentation)
+{
+  if(_segmentation)
+    {
+
+      if(!_segmentation->m_leftSegment && !_segmentation->m_rightSegment)
+            {
+              delete [] _segmentation->m_leftFaces;
+              delete [] _segmentation->m_rightFaces;
+              delete _segmentation;
+            }
+
+            if (_segmentation->m_leftSegment)
+            {
+               destroySegments(_segmentation->m_leftSegment);
+            }
+
+            if (_segmentation->m_rightSegment)
+            {
+               destroySegments(_segmentation->m_rightSegment);
+            }
+
+            m_segments.clear();
+            delete [] m_segmentsIndices;
+     }
+}
+
+
+Vector3f Mesh::calculateCentre(int _p1, int _p2, int _p3)
+{
+   Vector3f point1;
+   Vector3f point2;
+   Vector3f point3;
+
+   for(unsigned int i=0; i<3; ++i)
+   {
+       point1[i] = m_vertices->at(3*_p1 + i);
+       point2[i] = m_vertices->at(3*_p2 + i);
+       point3[i] = m_vertices->at(3*_p3 + i);
+   }
+
+   return (point1 + point2 + point3)/3;
+}
+
+
+
 

@@ -29,6 +29,16 @@
 using namespace Eigen;
 using namespace std;
 
+struct Segmentation
+{
+  Vector3i m_plane;
+  Segmentation* m_leftSegment;
+  Segmentation* m_rightSegment;
+  std::vector<GLuint>* m_leftFaces;
+  std::vector<GLuint>* m_rightFaces;
+  bool m_visited;
+};
+
 
 class Mesh
 {
@@ -70,12 +80,12 @@ class Mesh
  ///@brief Neighbour list
     std::vector<std::vector<int> >* m_neighbours;
  ///@brief GLuint addresses for vertex buffer objects -> vertex position, face indices, normals, texture coordinates
-    GLuint m_vbo1Position;
-    GLuint m_vbo1Indices;
-    GLuint m_vbo1Normals;
-    GLuint m_vboTextureCoord;
+    GLuint m_vboPositions;
+    GLuint m_vboNormals;
+    GLuint m_vboTextureCoords;
+    GLuint m_vboIndices;
  ///@brief GLuint addresses for vertex array objects that will contain any of the above buffer objects
-    GLuint m_vao1;
+    GLuint m_vao;
  ///@brief Pointer to vector of integers -> list of landmarked vertices on current mesh
     std::vector<int>* m_landmarkVertexIndices;
  ///@brief Integer variable representing the currently picked vertex index
@@ -84,9 +94,16 @@ class Mesh
     bool m_wireframe;
 ///@brief Boolean value showing whether the mesh was modified during a NRICP/ICP method
     bool m_modified;
-///@Principal eigenvectors and eigenvalues
+///@brief Principal eigenvectors and eigenvalues
     Matrix3f m_eigenvectors;
     Vector3f m_eigenvalues;
+///@brief Segmentation tree
+    Segmentation* m_segmentationRoot;
+///@brief Segments from tree
+    std::vector< std::vector<GLuint>* > m_segments;
+    std::vector<GLuint>* m_segmentsIndices;
+///@brief Boolean saying if we are displaying segments or the whole mesh
+    bool m_segmentationMode;
 
  public:
  ///@brief ctor for Mesh class
@@ -106,9 +123,9 @@ class Mesh
  ///@brief brings the mesh vertices in the [-1, 1]^3 space
     void normaliseMesh();
  ///@brief methods for binding the corresponding vertex array objects
-    void bindVAO1();
+    void bindVAOs();
  ///@brief deallocate buffer data memory
-    void unbindVAO1();
+    void unbindVAOs();
  ///@brief creates the arc-node list, m_adjMat
     void buildArcNodeMatrix();
  ///@brief creates the vertex matrix, m_D
@@ -167,6 +184,13 @@ class Mesh
     void rotateByEigenVectors();
 ///@brief Checks if eigenvectors are perpendicular to each other
     bool areEigenvectorsOrthogonal();
+///@brief Segmentation
+    void segmentMesh();
+    Segmentation* segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation *_segment, Segmentation *_parent);
+    void createSegmentList();
+    void destroySegments(Segmentation *_segmentation);
+    Vector3f calculateCentre(int _p1, int _p2, int _p3);
+
 
 /// Setters and Getters of the private members
     std::vector<GLfloat>* getVertices(){ return m_vertices; }
@@ -176,8 +200,8 @@ class Mesh
     std::vector<GLuint>* getFaceIndices() { return m_faceIndices; }
     unsigned int getEdgeCount() { return m_edgeCount; }
     unsigned int getTexCoordCount() { return m_texCoordCount; }
-    GLuint getVAO1() { return m_vao1; }
-    void setVAO1(GLuint _vao) { m_vao1 = _vao; }
+    GLuint getVAO() { return m_vao; }
+    void setVAO(GLuint _vao) { m_vao = _vao; }
     std::map <std::pair<unsigned int, unsigned int>, short >* getAdjMat(){ return m_adjMat; }
     SparseMatrix<float>* getD(){ return m_D; }
     float x() { return m_position[0]; }
@@ -236,6 +260,31 @@ class Mesh
     Matrix3f getEigenMatrix()
     {
         return m_eigenvectors;
+    }
+
+    bool isInSegmentationMode()
+    {
+        return m_segmentationMode;
+    }
+
+    void setSegmentationMode(bool _segmentationMode)
+    {
+        m_segmentationMode = _segmentationMode;
+    }
+
+    std::vector<GLuint>* getSegment(unsigned int _i)
+    {
+        if(_i < m_segments.size())
+        {
+            return m_segments[_i];
+        }
+
+        return NULL;
+    }
+
+    unsigned int getSegmentCount()
+    {
+        return m_segments.size();
     }
 
 };

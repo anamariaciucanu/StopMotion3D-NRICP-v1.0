@@ -79,7 +79,7 @@ void GLFWContainer::loadMesh(const char* _fileName)
    //  if(m_mesh[m_meshCount]->getNormals()->size() < 1)
     // {
          m_mesh[m_meshCount]->calculateNormals();
-         m_mesh[m_meshCount]->bindVAO1();
+         m_mesh[m_meshCount]->bindVAOs();
     // }
      m_meshCount++;
     }
@@ -213,6 +213,13 @@ void GLFWContainer::checkKeyPress()
     else if(glfwGetKey(m_window, GLFW_KEY_2)){
      setClickActiveMeshIndex(1);
     }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_3)){
+     m_mesh[0]->segmentMesh();
+     m_mesh[1]->segmentMesh();
+     sleep(1.0);
+    }   
+
 
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
       m_nrICP->addLandmarkCorrespondence();
@@ -413,30 +420,51 @@ void GLFWContainer::loopDrawing()
           for(unsigned int i=0; i<m_meshCount; ++i)
           {
            std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
-
            vec3 col1 = (i%2==0) ? vec3(0.9, 0.6, 0.3) : vec3(0.3, 0.6, 0.9);
-           m_shader->sendColourChoiceToShader(col1);
+
+           glUseProgram(m_shader->getShaderProgramme());
            m_shader->sendPickedIndexToShader(m_mesh[i]->getPickedVertexIndex());
            m_shader->sendLandmarkIndicesToShader(landmarks->size(), landmarks);
-           glUseProgram(m_shader->getShaderProgramme());
+           m_shader->sendColourChoiceToShader(col1);
 
-           m_mesh[i]->bindVAO1();
+           m_mesh[i]->bindVAOs();
 
-           glBindVertexArray(m_mesh[i]->getVAO1());
+           glBindVertexArray(m_mesh[i]->getVAO());
            glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
-
            m_shader->sendLandmarkIndicesToShader(0, landmarks);
-           if(m_mesh[i]->isWireframe())
+
+           if(m_mesh[i]->isInSegmentationMode())
            {
-            glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+               unsigned int segment_count = m_mesh[i]->getSegmentCount();
+               unsigned int obj_indices_count = 0;
+
+               for(unsigned int j=0; j<segment_count; ++j)
+               {
+
+                 vec3 col2 = vec3(sin((double)(j*30)), cos((double)(j*90)), sin((double)(j*45)));
+                 m_shader->sendColourChoiceToShader(col2);
+
+                 std::vector<GLuint>* segment = m_mesh[i]->getSegment(j);
+                 unsigned int segment_size = segment->size();
+                 glDrawElements(GL_TRIANGLES, segment_size, GL_UNSIGNED_INT, (GLvoid*)(obj_indices_count *  sizeof(GLuint)));
+                 obj_indices_count += segment_size;
+               }
            }
+
            else
            {
-            glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+             if(m_mesh[i]->isWireframe())
+             {
+              glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+             }
+             else
+             {
+              glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+             }
            }
 
-            m_mesh[i]->unbindVAO1();
-          }
+             m_mesh[i]->unbindVAOs();
+           }
 
 
        //update input handling events
