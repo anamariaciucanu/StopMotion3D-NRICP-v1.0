@@ -186,7 +186,8 @@ class Mesh
     bool areEigenvectorsOrthogonal();
 ///@brief Segmentation
     void segmentMesh();
-    Segmentation* segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation *_segment, Segmentation *_parent);
+    void splitSegmentIntoSubsegments(Segmentation* _segment, std::vector<GLuint>* _parentFaces, Vector3f _planeCentre, Vector3f _planeNormal);
+    Segmentation* segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation *_root, std::vector<GLuint> *_rootSideFaces);
     void createSegmentList();
     void destroySegments(Segmentation *_segmentation);
     Vector3f calculateCentre(int _p1, int _p2, int _p3);

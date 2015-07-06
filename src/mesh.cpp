@@ -1078,7 +1078,7 @@ void Mesh::segmentMesh()
         normal = (point2 - point1).cross(point3 - point1);
         normal.normalize();
 
-        m_segmentationRoot = segmentationProcedure(plane, normal, m_segmentationRoot, m_segmentationRoot);
+        m_segmentationRoot = segmentationProcedure(plane, normal, m_segmentationRoot, NULL);
         createSegmentList();
         m_segmentationMode = true;
     }
@@ -1088,166 +1088,81 @@ void Mesh::segmentMesh()
     }
 }
 
-Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation* _segment, Segmentation* _parent)
+void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>* _rootSideFaces, Vector3f _planeCentre, Vector3f _planeNormal)
 {
+    unsigned int size = _rootSideFaces->size();
+    unsigned int three_i;
+    float dot_directions;
+    Vector3f faceCentre;
+    Vector3i face;
+    Vector3f planeFaceDirection;
 
-    if(_segment)
+    for(unsigned int i=0; i<size/3; ++i)
     {
-       _segment->m_leftSegment = segmentationProcedure(_plane, _normal, _segment->m_leftSegment, _segment);
-       _segment->m_rightSegment = segmentationProcedure(_plane, _normal, _segment->m_rightSegment, _segment);
+     three_i = 3*i;
+     face[0] = _rootSideFaces->at(three_i);
+     face[1] = _rootSideFaces->at(three_i + 1);
+     face[2] = _rootSideFaces->at(three_i + 2);
+
+     faceCentre = calculateCentre(face[0], face[1], face[2]);
+     planeFaceDirection = faceCentre - _planeCentre;
+     planeFaceDirection.normalize();
+     dot_directions = _planeNormal.dot(planeFaceDirection);
+
+   if(dot_directions > 0 && dot_directions <= 1)
+     {
+       //Above plane - segment left
+       _root->m_leftFaces->push_back(face[0]);
+       _root->m_leftFaces->push_back(face[1]);
+       _root->m_leftFaces->push_back(face[2]);
+     }
+     else
+     {
+       //Below plane - segment right
+       _root->m_rightFaces->push_back(face[0]);
+       _root->m_rightFaces->push_back(face[1]);
+       _root->m_rightFaces->push_back(face[2]);
+     }
+    }
+}
+
+
+Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation* _root, std::vector<GLuint>* _rootSideFaces)
+{
+    if(_root)
+    {
+       _root->m_leftSegment = segmentationProcedure(_plane, _normal, _root->m_leftSegment, _root->m_leftFaces);
+       _root->m_rightSegment = segmentationProcedure(_plane, _normal, _root->m_rightSegment, _root->m_rightFaces);
     }
 
     else
     {
      //Segment is null, so it will contain plane and new segments
-
-        Vector3i face;
-        Vector3f faceNormal;
-        Vector3f point1;
-        Vector3f point2;
-        Vector3f point3;
+        _root = new Segmentation();
+        _root->m_plane = _plane;
+        _root->m_visited = false;
+        _root->m_leftFaces = new std::vector<GLuint>();
+        _root->m_rightFaces = new std::vector<GLuint>();
         Vector3f planeCentre = calculateCentre(_plane[0], _plane[1], _plane[2]);
-        Vector3f faceCentre;
-        Vector3f planeFaceDirection;
-        unsigned int size;
 
-        _segment = new Segmentation();
-        _segment->m_plane = _plane;
-        _segment->m_visited = false;
-        _segment->m_leftFaces = new std::vector<GLuint>();
-        _segment->m_rightFaces = new std::vector<GLuint>();
-
-      if(_parent)
+      if(_rootSideFaces)
         {
-        //Parent exists
-        //Left side
-            size = _parent->m_leftFaces->size();
+          //Parent exists
 
-            for(unsigned int i=0; i<size/3; ++i)
-            {
-              face[0] = _parent->m_leftFaces->at(3*i);
-              face[1] = _parent->m_leftFaces->at(3*i + 1);
-              face[2] = _parent->m_leftFaces->at(3*i + 2);
-
-              faceCentre = calculateCentre(face[0], face[1], face[2]);
-
-             for(unsigned int j=0; j<3; ++j)
-             {
-               point1[j] = m_vertices->at(3*face[0] + j);
-               point2[j] = m_vertices->at(3*face[1] + j);
-               point3[j] = m_vertices->at(3*face[2] + j);
-             }
-
-             faceNormal = (point2 - point1).cross(point3 - point1);
-             faceNormal.normalize();
-             planeFaceDirection = faceCentre - planeCentre;
-             planeFaceDirection.normalize();
-
-             float dot_normals = _normal.dot(faceNormal);
-             float dot_directions = _normal.dot(planeFaceDirection);
-
-             if(dot_directions >= 0 && dot_directions <= 1)
-             {
-               //Above plane - segment left
-               _segment->m_leftFaces->push_back(face[0]);
-               _segment->m_leftFaces->push_back(face[1]);
-               _segment->m_leftFaces->push_back(face[2]);
-             }
-             else
-             {
-               //Below plane - segment right
-               _segment->m_rightFaces->push_back(face[0]);
-               _segment->m_rightFaces->push_back(face[1]);
-               _segment->m_rightFaces->push_back(face[2]);
-             }
-            }
+          //Side
+          splitSegmentIntoSubsegments(_root, _rootSideFaces, planeCentre, _normal);
 
 
-            //Right side
-             size = _parent->m_rightFaces->size();
-
-            for(unsigned int i=0; i<size/3; ++i)
-            {
-              face[0] = _parent->m_rightFaces->at(3*i);
-              face[1] = _parent->m_rightFaces->at(3*i + 1);
-              face[2] = _parent->m_rightFaces->at(3*i + 2);
-
-             for(unsigned int j=0; j<3; ++j)
-             {
-               point1[j] = m_vertices->at(3*face[0] + j);
-               point2[j] = m_vertices->at(3*face[1] + j);
-               point3[j] = m_vertices->at(3*face[2] + j);
-             }
-
-             faceNormal = (point2 - point1).cross(point3 - point1);
-             faceNormal.normalize();
-             planeFaceDirection = faceCentre - planeCentre;
-             planeFaceDirection.normalize();
-
-             float dot_normals = _normal.dot(faceNormal);
-             float dot_directions = _normal.dot(planeFaceDirection);
-
-             if(dot_directions >= 0 && dot_directions <= 1)
-             {
-               //Above plane - segment left
-               _segment->m_leftFaces->push_back(face[0]);
-               _segment->m_leftFaces->push_back(face[1]);
-               _segment->m_leftFaces->push_back(face[2]);
-             }
-             else
-             {
-               //Below plane - segment right
-               _segment->m_rightFaces->push_back(face[0]);
-               _segment->m_rightFaces->push_back(face[1]);
-               _segment->m_rightFaces->push_back(face[2]);
-             }
-            }
-
-            //Clear parent
-            _parent->m_leftFaces->clear();
-            _parent->m_rightFaces->clear();
+          //Clear parent
+          _rootSideFaces->clear();
          }
       else
-      {
-          size = m_faceIndices->size();
+         {
+           splitSegmentIntoSubsegments(_root, m_faceIndices, planeCentre, _normal);
+         }
+     }
 
-          for(unsigned int i=0; i<m_faceCount; ++i)
-          {
-            face[0] = m_faceIndices->at(3*i);
-            face[1] = m_faceIndices->at(3*i + 1);
-            face[2] = m_faceIndices->at(3*i + 2);
-
-           for(unsigned int j=0; j<3; ++j)
-           {
-             point1[j] = m_vertices->at(3*face[0] + j);
-             point2[j] = m_vertices->at(3*face[1] + j);
-             point3[j] = m_vertices->at(3*face[2] + j);
-           }
-
-           faceNormal = (point2 - point1).cross(point3 - point1);
-           faceNormal.normalize();
-
-           float dot = _normal.dot(faceNormal);
-
-           if(dot >= 0.0 && dot <= 1)
-           {
-             //Above plane - segment left
-             _segment->m_leftFaces->push_back(face[0]);
-             _segment->m_leftFaces->push_back(face[1]);
-             _segment->m_leftFaces->push_back(face[2]);
-           }
-           else
-           {
-             //Below plane - segment right
-             _segment->m_rightFaces->push_back(face[0]);
-             _segment->m_rightFaces->push_back(face[1]);
-             _segment->m_rightFaces->push_back(face[2]);
-           }
-          }
-       }
-    }
-
-    return _segment;
+    return _root;
 }
 
 void Mesh::createSegmentList()

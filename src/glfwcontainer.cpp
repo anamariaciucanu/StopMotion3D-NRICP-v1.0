@@ -441,7 +441,7 @@ void GLFWContainer::loopDrawing()
                for(unsigned int j=0; j<segment_count; ++j)
                {
 
-                 vec3 col2 = vec3(sin((double)(j*30)), cos((double)(j*90)), sin((double)(j*45)));
+                 vec3 col2 = vec3(sin((double)(j * 35)), cos((double)(j * 20)), sin((double)(j * 15)));
                  m_shader->sendColourChoiceToShader(col2);
 
                  std::vector<GLuint>* segment = m_mesh[i]->getSegment(j);
