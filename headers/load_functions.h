@@ -8,9 +8,11 @@
 #include <stdio.h>
 #include <cstdlib>
 
+
 ///@brief loads text from file
 ///@param [in] _filename -> the file to be opened and read
 ///@param [out] char* -> string of characters representing the text in the file
+
 char* file_read(const char* _filename)
 {
       FILE* input = fopen(_filename, "rb");
@@ -35,30 +37,6 @@ char* file_read(const char* _filename)
       content[size] = '\0';
       return content;
 }
-
-
-//Aux functions/bits, commented out
-/*
-    printf("Eigenvectors: \n");
-    for(unsigned int i=0; i<3; ++i)
-    {
-        for(unsigned int j=0; j<3; ++j)
-        {
-            printf(" %f ", m_eigenvectors(i, j));
-        }
-        printf("\n");
-    }
-
-    printf("rotation matrix: \n");
-    for(unsigned int i=0; i<3; ++i)
-    {
-        for(unsigned int j=0; j<3; ++j)
-        {
-            printf(" %f ", m_eigenvectors(i, j));
-        }
-        printf("\n");
-    }
-*/
 
 
 

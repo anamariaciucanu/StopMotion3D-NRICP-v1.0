@@ -141,7 +141,7 @@ void GLFWContainer::update_titlebar()
      {
           previous_seconds = current_seconds;
           char tmp[128];
-          sprintf(tmp, "Stiffness %.2f ", m_nrICP->getStiffness());
+          sprintf(tmp, "Stiffness %.2f ", m_nrICP->getStiffness(), "Segmentation %i ", isSegmentationMode());
           glfwSetWindowTitle(m_window, tmp);
      }
  }
@@ -214,22 +214,27 @@ void GLFWContainer::checkKeyPress()
      setClickActiveMeshIndex(1);
     }
 
-    else if(glfwGetKey(m_window, GLFW_KEY_3)){
+   else if(glfwGetKey(m_window, GLFW_KEY_3)){
+     m_mesh[0]->setSegmentationMode(!m_mesh[0]->isSegmentationMode());
+     m_mesh[1]->setSegmentationMode(!m_mesh[1]->isSegmentationMode());
+     sleep(1.0);
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_C)){
      m_mesh[0]->segmentMesh();
      m_mesh[1]->segmentMesh();
+     m_nrICP_Segment->initializeNRICP();
      sleep(1.0);
     }   
 
-
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
       m_nrICP->addLandmarkCorrespondence();
-      m_nrICP->setLandmarkCorrespChanged(true);
+      m_nrICP_Segment->addLandmarkCorrespondence();
       sleep(1.0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_K)){
-        m_nrICP->clearLandmarkCorrespondences();
-        m_nrICP->setLandmarkCorrespChanged(true);      
+        m_nrICP->clearLandmarkCorrespondences();   
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_P))
@@ -247,10 +252,20 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_T))
     {
-     m_nrICP->calculateNonRigidTransformation();
-     m_nrICP->modifyStiffness(-1.0);
-     m_nrICP->modifyBeta(-0.001);
-     sleep(1.0);
+     if(isSegmentationMode())
+     {
+       m_nrICP_Segment->calculateNonRigidTransformation();
+       m_nrICP_Segment->modifyStiffness(-1.0);
+       m_nrICP_Segment->modifyBeta(-0.001);
+     }
+     else
+     {
+       m_nrICP->calculateNonRigidTransformation();
+       m_nrICP->modifyStiffness(-1.0);
+       m_nrICP->modifyBeta(-0.001);
+     }
+
+      sleep(1.0);
     }
 }
 
@@ -291,8 +306,6 @@ void GLFWContainer::loadLandmarks(const char* _templateFile, const char* _target
      m_mesh[1]->setPickedVertexIndex(l2);
      m_nrICP->addLandmarkCorrespondence();
     }
-
-    m_nrICP->setLandmarkCorrespChanged(true);
 }
 
 void GLFWContainer::printConfiguration()
@@ -343,6 +356,7 @@ void GLFWContainer::initializeDrawing()
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
+    m_nrICP_Segment = new NRICP_Segment(m_mesh[0], m_mesh[1]);
     m_nrICP->initializeNRICP();
 
     loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
@@ -416,7 +430,6 @@ void GLFWContainer::loopDrawing()
 
 
      //Draw meshes
-
           for(unsigned int i=0; i<m_meshCount; ++i)
           {
            std::vector<int>* landmarks = m_mesh[i]->getLandmarkVertexIndices();
@@ -433,15 +446,14 @@ void GLFWContainer::loopDrawing()
            glDrawElements(GL_POINTS, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
            m_shader->sendLandmarkIndicesToShader(0, landmarks);
 
-           if(m_mesh[i]->isInSegmentationMode())
-           {
+           if(isSegmentationMode())
+           {               
                unsigned int segment_count = m_mesh[i]->getSegmentCount();
                unsigned int obj_indices_count = 0;
 
                for(unsigned int j=0; j<segment_count; ++j)
-               {
-
-                 vec3 col2 = vec3(sin((double)(j * 35)), cos((double)(j * 20)), sin((double)(j * 15)));
+               {                   
+                 vec3 col2 = (m_mesh[i]->getActiveSegmentNumber() == j)? vec3(1.0, 1.0, 1.0) : vec3(sin((double)(j * 35)), cos((double)(j * 20)), sin((double)(j * 15)));
                  m_shader->sendColourChoiceToShader(col2);
 
                  std::vector<GLuint>* segment = m_mesh[i]->getSegment(j);

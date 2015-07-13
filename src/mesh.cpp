@@ -33,6 +33,7 @@ Mesh::Mesh()
     m_segmentationRoot = NULL;
     m_segmentationMode = false;
     m_segmentsIndices = new std::vector<GLuint>();
+    m_activeSegment = -1;
 }
 
 Mesh::~Mesh()
@@ -456,13 +457,13 @@ void Mesh::unbindVAOs()
 }
 
 void Mesh::buildArcNodeMatrix()
-{
+{   
   //Create the arc-node adjacency matrix
 
     if(!m_adjMat)
     {
-     m_adjMat = new std::map<std::pair<unsigned int, unsigned int>, short >();
-     std::map <std::pair<unsigned int, unsigned int>, short >::iterator it;
+     m_adjMat = new std::set < std::pair<unsigned int, unsigned int> >();
+     std::set < std::pair<unsigned int, unsigned int> >::iterator it;
      unsigned int three_i;
      unsigned int v1;
      unsigned int v2;
@@ -482,7 +483,7 @@ void Mesh::buildArcNodeMatrix()
         it = m_adjMat->find(make_pair(min, max));
         if(it == m_adjMat->end())
         {
-            m_adjMat->insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
+            m_adjMat->insert(make_pair(min, max));
             m_edgeCount++;
         }
 
@@ -491,7 +492,7 @@ void Mesh::buildArcNodeMatrix()
         it = m_adjMat->find(make_pair(min, max));
         if(it == m_adjMat->end())
         {
-            m_adjMat->insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
+            m_adjMat->insert(make_pair(min, max));
             m_edgeCount++;
         }
 
@@ -500,7 +501,7 @@ void Mesh::buildArcNodeMatrix()
         it = m_adjMat->find(make_pair(min, max));
         if(it == m_adjMat->end())
         {
-            m_adjMat->insert(make_pair(std::pair<unsigned int, unsigned int>(min, max), 0));
+            m_adjMat->insert(make_pair(min, max));
             m_edgeCount++;
         }
      }
@@ -544,10 +545,10 @@ void Mesh::buildNeighbourList()
   m_neighbours = new std::vector<std::vector<int> >(m_vertCount);
 
 
-  for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+  for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
   {
-      v1 = it->first.first;
-      v2 = it->first.second;
+      v1 = it->first;
+      v2 = it->second;
 
       m_neighbours->at(v1).push_back(v2);
       m_neighbours->at(v2).push_back(v1);
@@ -1081,6 +1082,7 @@ void Mesh::segmentMesh()
         m_segmentationRoot = segmentationProcedure(plane, normal, m_segmentationRoot, NULL);
         createSegmentList();
         m_segmentationMode = true;
+        m_activeSegment = 0;
     }
     else
     {

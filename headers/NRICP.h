@@ -12,20 +12,14 @@
 #include <Eigen>
 #include <src/LU/Inverse.h>
 #include <iostream>
+#include "sphere_partition.h"
 
 ///@brief Structure linking the elements of a sphere hierarchy
 ///@param average -> the average position of he vertices between start and end
 ///@param start, end -> the start and end vertex indices
 ///@param left -> pointer to left branch with the vertices on the left
 ///@param right -> pointer to the right branch with the vertices on the right
-struct SpherePartition
-{
-  float average[3];
-  unsigned int start;
-  unsigned int end;
-  SpherePartition* left;
-  SpherePartition* right;
-};
+
 
 class NRICP
 {
@@ -50,15 +44,13 @@ class NRICP
     float m_epsilon;
  ///@brief Float gor gamma, the skew influence
     float m_gamma;
- ///@brief Pointer to map of pairs -> the edge list
-    std::map < std::pair<unsigned int, unsigned int>, short >* m_adjMat;
- ///@brief Boolean value determining whether the landmark correspondences vector has been modified
-    bool m_landmarkCorrespChanged;
+ ///@brief Pointer to set of pairs -> the edge list
+    std::set < std::pair<unsigned int, unsigned int> >* m_adjMat;
  ///@brief Boolean value that says whether the stiffness has changed
     bool m_stiffnessChanged;
  ///@brief Checks to see if the NRICP has started
     bool m_nricpStarted;
- ///@brief Pointer to a dynamic integer vector -> weights of target correspondences
+ ///@brief Pointer to a dynamic integer vector -> weights of target correspondences    
     VectorXi* m_W;
  ///@brief Pointer to sparse matrix of floats -> the template vertex information in an n x 4n matrix
     SparseMatrix<GLfloat>* m_D;
@@ -75,6 +67,7 @@ class NRICP
 
 
  public:
+
     ///@brief ctor of NRICP class object
     ///@param [in] _template -> template mesh
     ///@param [in] _target -> target mesh
@@ -95,7 +88,7 @@ class NRICP
     void buildVertexMatrix();
     ///@brief performs an NRICP transformation on the template, to morph it closer to the target mesh
     void calculateNonRigidTransformation();
-    ///@brief performs a hybrid ICP transformation on the template, to morph it closer to the target mesh
+    ///@brief performs a hybrid ICP transformation on the template, to morph it closer to the target mesh   
     void calculateRigidTransformation();
     ///@brief finds the closest target vertex to the template vertex, from a restrained group of target vertices
     ///@param [in] _templateIndex Unsigned integer -> the index of the template vertex
@@ -104,7 +97,7 @@ class NRICP
     ///@brief Fills in m_U with target correspondences for every template vertex
     void findCorrespondences();
     ///@brief Finds m_X transformation matrix for the template mesh for ICP
-    void determineRigidOptimalDeformation();
+    void determineRigidOptimalDeformation();    
     ///@brief Finds m_X transformation matrix for the template mesh for NRICP
     void determineNonRigidOptimalDeformation();
     ///@brief Solves AX=B
@@ -146,7 +139,6 @@ class NRICP
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
 
     /// Setters and Getters for the private members
-    void setLandmarkCorrespChanged(bool _value) { m_landmarkCorrespChanged = _value; }
     void setNRICPStarted(bool _value) { m_nricpStarted = _value; }
     float getStiffness() { return m_stiffness; }
     void setTemplate(Mesh* _template){ m_template = _template; }

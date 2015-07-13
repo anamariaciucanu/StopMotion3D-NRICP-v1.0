@@ -1,8 +1,8 @@
 #include "NRICP.h"
+#include <OrderingMethods>
 
 //TO DO: m_landmarkCorrespChanged not used anywhere
-
-#include <OrderingMethods>
+//TO DO: clean to look like NRICP_Segment
 
 NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
@@ -29,7 +29,6 @@ void NRICP::initializeNRICP()
     m_targetVertCount = m_target->getVertCount();
     m_stiffness = 100.0;
     m_landmarkCorrespondenceCount = m_template->getLandmarkVertexIndices()->size();
-    m_landmarkCorrespChanged = true;
     m_stiffnessChanged = true;
     m_nricpStarted = false;
 
@@ -153,7 +152,6 @@ void NRICP::addLandmarkCorrespondence()
    m_template->addLandmarkVertexIndex();
    m_target->addLandmarkVertexIndex();
    m_landmarkCorrespondenceCount ++;
-   m_landmarkCorrespChanged = true;
  }
 }
 
@@ -162,7 +160,6 @@ void NRICP::clearLandmarkCorrespondences()
     m_template->clearLandmarkVertexIndices();
     m_target->clearLandmarkVertexIndices();
     m_landmarkCorrespondenceCount = 0;
-    m_landmarkCorrespChanged = true;
 }
 
 void NRICP::calculateRigidTransformation()
@@ -188,6 +185,7 @@ void NRICP::calculateRigidTransformation()
     //float current_seconds = glfwGetTime();
     //float elapsed_seconds = current_seconds - previous_seconds;
 }
+
 
 void NRICP::calculateNonRigidTransformation()
 {
@@ -220,22 +218,6 @@ void NRICP::calculateNonRigidTransformation()
    printf(" NRICP takes %f seconds \n ", elapsed_seconds);
 }
 
-float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
-  {
-    float norm = 0.0;
-    float diff = 0.0;
-    unsigned int floatCount = 4 * m_templateVertCount;
-
-    for(unsigned int i=0; i < floatCount; ++i)
-    {
-        for(unsigned int j=0; j<3; ++j)
-        {
-            diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
-            norm += diff*diff;
-        }
-    }
-    return sqrt(norm);
-  }
 
 void NRICP::findCorrespondences()
 {
@@ -401,11 +383,11 @@ void NRICP::determineRigidOptimalDeformation()
 
  //Alpha * M * G
         i = 0;
-        for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+        for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
         {
           four_i = 4 * i; //for all edges
-          v1 = it->first.first;
-          v2 = it->first.second;
+          v1 = it->first;
+          v2 = it->second;
           four_v1 = 4 * v1;
           four_v2 = 4 * v2;
           m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
@@ -476,11 +458,11 @@ void NRICP::determineNonRigidOptimalDeformation()
    if(m_stiffnessChanged)
    {
     i = 0;
-    for(std::map< std::pair<unsigned int, unsigned int>, short>::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+    for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
       four_i = 4 * i; //for all edges
-      v1 = it->first.first;
-      v2 = it->first.second;
+      v1 = it->first;
+      v2 = it->second;
       four_v1 = 4 * v1;
       four_v2 = 4 * v2;
       m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
@@ -587,7 +569,26 @@ void NRICP::deformTemplate()
       }
 
       m_D->makeCompressed();
-      m_template->setModified(true);
+  }
+
+
+
+
+float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
+  {
+    float norm = 0.0;
+    float diff = 0.0;
+    unsigned int floatCount = 4 * m_templateVertCount;
+
+    for(unsigned int i=0; i < floatCount; ++i)
+    {
+        for(unsigned int j=0; j<3; ++j)
+        {
+            diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
+            norm += diff*diff;
+        }
+    }
+    return sqrt(norm);
   }
 
 float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
@@ -598,8 +599,5 @@ float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
 
       return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
   }
-
-
-
 
 

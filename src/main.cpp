@@ -16,6 +16,7 @@ Use valgrind --leak-check=full to check for memory leaks.
 
 #include "glfwcontainer.h"
 
+
 //Container has the GLFW window where OpenGL is rendered
 GLFWContainer* glfw_container = new GLFWContainer(1280, 720);
 

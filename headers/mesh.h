@@ -20,10 +20,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
-#include <map>
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <set>
 
 
 using namespace Eigen;
@@ -72,9 +72,9 @@ class Mesh
     unsigned int m_faceCount;
  ///@brief Unsigned integer variable -> the number of texture coordinate pairs?
     unsigned int m_texCoordCount;
- ///@brief Pointer to a map of pairs of unsigned integers -> a list of directed edges (smaller index -> larger index)
+ ///@brief Pointer to a set of pairs of unsigned integers -> a list of directed edges (smaller index -> larger index)
  ///corresponds to the arc-node matrix
-    std::map <std::pair<unsigned int, unsigned int>, short >* m_adjMat;
+    std::set <std::pair<unsigned int, unsigned int> >* m_adjMat;
  ///@brief Pointer to a Sparse Matrix of GLfloats, from the Eigen library -> contains the vertex floats in a n x 4n matrix (n = m_vertCount)
     SparseMatrix<GLfloat>* m_D;
  ///@brief Neighbour list
@@ -102,7 +102,8 @@ class Mesh
 ///@brief Segments from tree
     std::vector< std::vector<GLuint>* > m_segments;
     std::vector<GLuint>* m_segmentsIndices;
-///@brief Boolean saying if we are displaying segments or the whole mesh
+///@brief int indicating the active segment to be used and displayed
+    int m_activeSegment;
     bool m_segmentationMode;
 
  public:
@@ -203,7 +204,7 @@ class Mesh
     unsigned int getTexCoordCount() { return m_texCoordCount; }
     GLuint getVAO() { return m_vao; }
     void setVAO(GLuint _vao) { m_vao = _vao; }
-    std::map <std::pair<unsigned int, unsigned int>, short >* getAdjMat(){ return m_adjMat; }
+    std::set <std::pair<unsigned int, unsigned int> >* getAdjMat(){ return m_adjMat; }
     SparseMatrix<float>* getD(){ return m_D; }
     float x() { return m_position[0]; }
     float y() { return m_position[1]; }
@@ -230,8 +231,6 @@ class Mesh
     void setWireframe(bool _value){ m_wireframe = _value; }
     bool isWireframe(){ return m_wireframe; }
     std::vector<int> getNeighbours(int _index) { return m_neighbours->at(_index); }
-    void setModified(bool _modified) { m_modified = _modified; }
-    bool isModified() { return m_modified; }
 
     void appendVertex(Vector3f _vertex)
     {
@@ -263,16 +262,6 @@ class Mesh
         return m_eigenvectors;
     }
 
-    bool isInSegmentationMode()
-    {
-        return m_segmentationMode;
-    }
-
-    void setSegmentationMode(bool _segmentationMode)
-    {
-        m_segmentationMode = _segmentationMode;
-    }
-
     std::vector<GLuint>* getSegment(unsigned int _i)
     {
         if(_i < m_segments.size())
@@ -286,6 +275,30 @@ class Mesh
     unsigned int getSegmentCount()
     {
         return m_segments.size();
+    }
+
+    int getActiveSegmentNumber()
+    {
+        return m_activeSegment;
+    }
+
+    std::vector<GLuint>* getActiveSegment()
+    {
+        if(m_activeSegment >= 0)
+        {
+         return m_segments.at(m_activeSegment);
+        }
+        return NULL;
+    }
+
+    bool isSegmentationMode()
+    {
+      return m_segmentationMode;
+    }
+
+    void setSegmentationMode(bool _segmentationMode)
+    {
+      m_segmentationMode = _segmentationMode;
     }
 
 };

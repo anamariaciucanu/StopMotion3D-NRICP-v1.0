@@ -13,6 +13,7 @@
 #include "matrix.h"
 #include "camera.h"
 #include "NRICP.h"
+#include "NRICP_Segment.h"
 
 using namespace std;
 
@@ -35,6 +36,7 @@ class GLFWContainer
  ///@brief Pointer to NRICP class object, which contains the nonrigid iterative closest point algorithm implementation for
  /// pose matching between any two meshes from the mesh array
     NRICP* m_nrICP;
+    NRICP_Segment* m_nrICP_Segment;
  ///@brief Unsigned integer variable holding the number of meshes introduced in the mesh array
     unsigned int m_meshCount;
  ///@brief Unsigned integer variable determining the index from the mesh array of the currently active mesh
@@ -106,6 +108,11 @@ class GLFWContainer
     void setWireframe(bool _value)
     {
         m_mesh[m_clickActiveMeshIndex]->setWireframe(_value);
+    }
+
+    bool isSegmentationMode()
+    {
+        return m_mesh[0]->isSegmentationMode() && m_mesh[1]->isSegmentationMode();
     }
 
     void printCurvatureActiveVertex()
