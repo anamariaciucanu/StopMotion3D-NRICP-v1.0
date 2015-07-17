@@ -262,13 +262,14 @@ void GLFWContainer::checkKeyPress()
      {
        m_nrICP_Segment->calculateNonRigidTransformation();
        m_nrICP_Segment->modifyStiffness(-1.0);
-       m_nrICP_Segment->modifyBeta(-0.001);
+       m_nrICP_Segment->modifyBeta(-0.001);       
      }
      else
      {
        m_nrICP->calculateNonRigidTransformation();
        m_nrICP->modifyStiffness(-1.0);
        m_nrICP->modifyBeta(-0.001);
+       m_nrICP->setLandmarksChanged(false);
      }
 
       sleep(1.0);
@@ -367,7 +368,7 @@ void GLFWContainer::initializeDrawing()
     //m_nrICP_Segment = new NRICP_Segment(m_mesh[0], m_mesh[1]);
     m_nrICP->initializeNRICP();
 
-    //loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
+    loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
 
     //Bind VAOs
 

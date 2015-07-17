@@ -48,10 +48,13 @@ class NRICP
     std::set < std::pair<unsigned int, unsigned int> >* m_adjMat;
  ///@brief Boolean value that says whether the stiffness has changed
     bool m_stiffnessChanged;
- ///@brief Checks to see if the NRICP has started
-    bool m_nricpStarted;
- ///@brief Pointer to a dynamic integer vector -> weights of target correspondences    
+ ///@brief Landmarks number has changed
+    bool m_landmarksChanged;
+  ///@brief Pointer to a dynamic integer vector -> weights of target correspondences
     VectorXi* m_W;
+ ///@brief Pointer to a dynamic integer vector -> 0 and 1 representing the existance or non-e of a landmark between
+ ///a point from the template and a point from the target
+    VectorXi* m_hasLandmark;
  ///@brief Pointer to sparse matrix of floats -> the template vertex information in an n x 4n matrix
     SparseMatrix<GLfloat>* m_D;
  ///@brief  Pointer to dynamic float matrix -> contains the target correspondences
@@ -108,6 +111,8 @@ class NRICP
     void addLandmarkCorrespondence();
     ///@brief Clears landmark correspondences list
     void clearLandmarkCorrespondences();
+    ///@brief Add landmark correspondences to m_D and m_U matrices and to the m_hasLandmark vector
+    void addLandmarkInformation();
     ///@brief Modifies stiffness by a certain value
     ///@param [in] _value Float variable by which the stiffness is modified
     void modifyStiffness(float _value)
@@ -139,11 +144,12 @@ class NRICP
     float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
 
     /// Setters and Getters for the private members
-    void setNRICPStarted(bool _value) { m_nricpStarted = _value; }
     float getStiffness() { return m_stiffness; }
     void setTemplate(Mesh* _template){ m_template = _template; }
     Mesh* getTemplate(){ return m_template; }
     void setTarget(Mesh* _target){ m_target = _target; }
     Mesh* getTarget() { return m_target; }
+    bool haveLandmarksChanged() { return m_landmarksChanged; }
+    void setLandmarksChanged(bool _value) { m_landmarksChanged = _value; }
 };
 #endif // NRICP_H
