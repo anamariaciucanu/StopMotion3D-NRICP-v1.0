@@ -209,19 +209,26 @@ void NRICP_Segment::buildLandmarkArrays()
   m_templateLandmarks->clear();
   m_targetLandmarks->clear();
 
+  int segmentLandmarkIndex;
+
+  //Adding mesh landmarks
   for(int i=0; i<sizeTemplateLandmarks; ++i)
   {
-    if(findValue(templateLandmarks->at(i), m_templateSegmentVertIndices) >= 0)
+    segmentLandmarkIndex = findValue(templateLandmarks->at(i), m_templateSegmentVertIndices);
+
+    if(segmentLandmarkIndex >= 0)
     {
-        m_templateLandmarks->push_back(templateLandmarks->at(i));
+        m_templateLandmarks->push_back(segmentLandmarkIndex);
     }
   }
 
   for(int j=0; j<sizeTargetLandmarks; ++j)
   {
-      if(findValue(targetLandmarks->at(j), m_targetSegmentVertIndices) >= 0)
+      segmentLandmarkIndex = findValue(targetLandmarks->at(j), m_targetSegmentVertIndices);
+
+      if(segmentLandmarkIndex >= 0)
       {
-          m_targetLandmarks->push_back(targetLandmarks->at(j));
+          m_targetLandmarks->push_back(segmentLandmarkIndex);
       }
   }
 }
@@ -542,6 +549,7 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
 
         m_nricpStarted = false;
      }
+
 
      solveLinearSystem();
 }

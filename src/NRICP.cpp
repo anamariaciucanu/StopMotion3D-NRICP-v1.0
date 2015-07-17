@@ -9,7 +9,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_beta = 1.0;
-    m_epsilon = 4.0;
+    m_epsilon = 10.0;
     m_gamma = 1.0;
 
     m_targetPartition = NULL;
@@ -220,7 +220,10 @@ void NRICP::calculateNonRigidTransformation()
 
 
 void NRICP::findCorrespondences()
-{
+{    
+    //If a landmark is not already in place, we find a correspondence
+    //Else we use landmark information
+
       std::vector<GLfloat>* vertsTemplate = m_template->getVertices();
       Vector3f templateVertex;
       float distance_left = 0.0;
