@@ -64,9 +64,9 @@ class NRICP
  ///@brief Pointer to hierarchical sphere structure of the target vertex information
     SpherePartition* m_targetPartition;
  ///@brief Pointer to a sparse matrix of floats -> m_A matrix from NRICP, used to determine m_X
-    SparseMatrix<GLfloat>* m_A;
+    SparseMatrix<GLfloat, ColMajor>* m_A;
  ///@brief Pointer to a sparse matrix of floats -> m_B matrix from NRICP, used to determine m_X
-    SparseMatrix<GLfloat>* m_B;
+    SparseMatrix<GLfloat, ColMajor>* m_B;
 
 
  public:

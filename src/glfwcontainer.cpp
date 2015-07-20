@@ -76,12 +76,9 @@ void GLFWContainer::loadMesh(const char* _fileName)
     m_mesh[m_meshCount] = new Mesh();
     if(m_mesh[m_meshCount]->loadMesh(_fileName))
     {
-   //  if(m_mesh[m_meshCount]->getNormals()->size() < 1)
-    // {
          m_mesh[m_meshCount]->calculateNormals();
-         m_mesh[m_meshCount]->bindVAOs();
-    // }
-     m_meshCount++;
+         m_mesh[m_meshCount]->bindVAOs();    
+         m_meshCount++;
     }
     else
     {
@@ -141,7 +138,15 @@ void GLFWContainer::update_titlebar()
      {
           previous_seconds = current_seconds;
           char tmp[128];
-          sprintf(tmp, "Stiffness %.2f ", m_nrICP->getStiffness(), "Segmentation %i ", isSegmentationMode());
+          if(isSegmentationMode())
+          {
+           sprintf(tmp, "Active segment stiffness %.2f ", m_nrICP_Segment->getStiffness());
+          }
+          else
+          {
+           sprintf(tmp, "Mesh segment stiffness %.2f ", m_nrICP->getStiffness());
+          }
+
           glfwSetWindowTitle(m_window, tmp);
      }
  }
@@ -234,13 +239,13 @@ void GLFWContainer::checkKeyPress()
       }
       if(m_nrICP_Segment)
       {
-        //  m_nrICP_Segment->addLandmarkCorrespondence();
+          m_nrICP_Segment->addLandmarkCorrespondence();
       }
       sleep(1.0);
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_K)){
-        m_nrICP->clearLandmarkCorrespondences();   
+        m_nrICP->clearLandmarkCorrespondences();
     }
 
     else if(glfwGetKey(m_window, GLFW_KEY_P))
@@ -269,7 +274,6 @@ void GLFWContainer::checkKeyPress()
        m_nrICP->calculateNonRigidTransformation();
        m_nrICP->modifyStiffness(-1.0);
        m_nrICP->modifyBeta(-0.001);
-       m_nrICP->setLandmarksChanged(false);
      }
 
       sleep(1.0);
@@ -350,22 +354,22 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     float transformations[6] = {0.0, 0.0, 0.0, -0.7, 0.1, 0.0};
-   // loadMesh("../models/HelliDropter1.obj");
-    loadMesh("../models/Cube1.obj");
+    loadMesh("../models/HelliDropter1.obj");
+    //loadMesh("../models/Cube1.obj");
     m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);
     m_mesh[0]->calculateEigenvectors();
 
     transformations[3] = 0.7;
-    //loadMesh("../models/HelliDropter2.obj");
-    loadMesh("../models/Cube2.obj");
+    loadMesh("../models/HelliDropter2.obj");
+    //loadMesh("../models/Cube2.obj");
     m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[1]->moveObject(transformations[3], transformations[4], transformations[5]);
     m_mesh[1]->calculateEigenvectors();
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-    //m_nrICP_Segment = new NRICP_Segment(m_mesh[0], m_mesh[1]);
+    m_nrICP_Segment = new NRICP_Segment(m_mesh[0], m_mesh[1]);
     m_nrICP->initializeNRICP();
 
     loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");
@@ -457,10 +461,10 @@ void GLFWContainer::loopDrawing()
 
            if(isSegmentationMode())
            {               
-               unsigned int segment_count = m_mesh[i]->getSegmentCount();
-               unsigned int obj_indices_count = 0;
+               int segment_count = m_mesh[i]->getSegmentCount();
+               int obj_indices_count = 0;
 
-               for(unsigned int j=0; j<segment_count; ++j)
+               for(int j=0; j<segment_count; ++j)
                {                   
                  vec3 col2 = (m_mesh[i]->getActiveSegmentNumber() == j)? vec3(1.0, 1.0, 1.0) : vec3(sin((double)(j * 35)), cos((double)(j * 20)), sin((double)(j * 15)));
                  m_shader->sendColourChoiceToShader(col2);

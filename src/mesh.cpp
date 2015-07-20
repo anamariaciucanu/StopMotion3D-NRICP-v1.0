@@ -766,7 +766,7 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
            //Find intersection point
             Vector3f intersection = _origin + t * _ray;
             float min = 100;
-            int imin;
+            int imin = -1;
 
             float distance1 = euclideanDistance(intersection, point1);
             float distance2 = euclideanDistance(intersection, point2);

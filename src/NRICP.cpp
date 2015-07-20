@@ -9,7 +9,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
     m_beta = 1.0;
-    m_epsilon = 10.0;
+    m_epsilon = 5.0;
     m_gamma = 1.0;
 
     m_targetPartition = NULL;
@@ -20,9 +20,6 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_A = new SparseMatrix<GLfloat>();
     m_B = new SparseMatrix<GLfloat>();
     m_landmarksChanged = false;
-
-//Aux
-   //myfile.open("../logs/times6.txt");
 }
 
 void NRICP::initializeNRICP()
@@ -70,18 +67,16 @@ void NRICP::initializeNRICP()
        m_targetPartition = createPartitions(0, m_targetVertCount-1, m_targetPartition);
 
     //Sparse matrices A and B
-    //Landmarks not included here
        m_templateEdgeCount = m_template->getEdgeCount();
 
     //Mighty matrices
        unsigned int sizeRowsMG = 4 * m_templateEdgeCount;
-       unsigned int sizeRowsWD = m_templateVertCount;
        unsigned int sizeColsA = 4 * m_templateVertCount;
 
-       m_A->resize(sizeRowsMG + sizeRowsWD, sizeColsA);
-       m_B->resize(sizeRowsMG + sizeRowsWD, 3);
-       m_A->resizeNonZeros(2 * sizeRowsMG + 4 * sizeRowsWD);
-       m_B->resizeNonZeros(3 * m_templateVertCount);
+       m_A->resize(sizeRowsMG + m_templateVertCount, sizeColsA);
+       m_B->resize(sizeRowsMG + m_templateVertCount, 3);
+       m_A->reserve(2 * sizeRowsMG + sizeColsA);
+       m_B->reserve(3 * m_templateVertCount);
 }
 
 
@@ -182,6 +177,12 @@ void NRICP::clearLandmarkCorrespondences()
 
 void NRICP::addLandmarkInformation()
 {
+    if(m_landmarksChanged)
+     {
+        m_beta = 1.0;
+        m_landmarksChanged = false;
+     }
+
    std::vector<int>* landmarksTemplate = m_template->getLandmarkVertexIndices();
    std::vector<int>* landmarksTarget = m_target->getLandmarkVertexIndices();
    int four_l1, l1, l2;
@@ -197,16 +198,15 @@ void NRICP::addLandmarkInformation()
      l2_point = m_target->getVertex(l2);
 
      //Template side in m_D
-     //TO DO: Change influence of landmarks
      m_D->coeffRef(l1, four_l1) = m_beta * l1_point[0];
      m_D->coeffRef(l1, four_l1 + 1) = m_beta * l1_point[1];
      m_D->coeffRef(l1, four_l1 + 2) = m_beta * l1_point[2];
      m_D->coeffRef(l1, four_l1 + 3) = 1.0;
 
      //Target side in m_U
-     (*m_U)(l2, 0) = l2_point[0];
-     (*m_U)(l2, 1) = l2_point[1];
-     (*m_U)(l2, 2) = l2_point[2];
+     (*m_U)(l1, 0) = l2_point[0];
+     (*m_U)(l1, 1) = l2_point[1];
+     (*m_U)(l1, 2) = l2_point[2];
 
      //Boolean value
      (*m_hasLandmark)(l1) = 1;
@@ -221,6 +221,10 @@ void NRICP::calculateRigidTransformation()
 
     m_template->rotateByEigenVectors();
     m_target->rotateByEigenVectors();
+
+    //Hardcoded auxiliaries
+    m_template->rotateObject(0, 90, -180);
+    m_target->rotateObject(0, -90, 0);
 }
 
 
@@ -232,11 +236,7 @@ void NRICP::calculateNonRigidTransformation()
    X_prev->setZero(4 * m_templateVertCount, 3);
    m_stiffnessChanged = true;
 
-  if(m_landmarksChanged)
-   {
-     addLandmarkInformation();
-     m_landmarksChanged = false;
-   }
+   addLandmarkInformation();
    findCorrespondences();
    determineNonRigidOptimalDeformation();
    deformTemplate();
@@ -458,12 +458,12 @@ void NRICP::solveLinearSystem()
         m_A->makeCompressed();
         m_B->makeCompressed();
 
-        SparseLU <SparseMatrix<GLfloat> > solver;
+        SparseLU <SparseMatrix<GLfloat, ColMajor>, COLAMDOrdering<int>  > solver;
         solver.compute((*m_A).transpose() * (*m_A));
-        SparseMatrix<GLfloat> I(4 * m_templateVertCount, 4 * m_templateVertCount);
+        SparseMatrix<GLfloat, ColMajor> I(4 * m_templateVertCount, 4 * m_templateVertCount);
         I.setIdentity();      
-        SparseMatrix<GLfloat> A_inv = solver.solve(I);
-        SparseMatrix<GLfloat> result = A_inv * (*m_A).transpose() * (*m_B);
+        SparseMatrix<GLfloat, ColMajor> A_inv = solver.solve(I);
+        SparseMatrix<GLfloat, ColMajor> result = A_inv * (*m_A).transpose() * (*m_B);
         result.uncompress();
         (*m_X) = result;
 }
