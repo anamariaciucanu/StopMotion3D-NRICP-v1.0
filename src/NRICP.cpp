@@ -29,7 +29,7 @@ void NRICP::initializeNRICP()
 {
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
-    m_stiffness = 1.0;
+    m_stiffness = 10.0;
     m_landmarkCorrespondenceCount = m_template->getLandmarkVertexIndices()->size();
     m_stiffnessChanged = true;
 
@@ -88,7 +88,7 @@ void NRICP::initializeNRICP()
 NRICP::~NRICP()
 {
     m_W->resize(0, 0);
-    m_hasLandmark->resize(0, 0);
+    m_hasLandmark->resize(0);
     m_U->resize(0, 0);
     m_X->resize(0, 0);
     m_A->resize(0, 0);
@@ -129,7 +129,7 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
     if(noElem > 3)
     {
      _partition->left = createPartitions(_start, _start+noElem/2, _partition->left);
-     _partition->right = createPartitions(_start+noElem/2, _end, _partition->right);
+     _partition->right = createPartitions(_start+noElem/2+1, _end, _partition->right);
     }
 
     return _partition;
@@ -167,6 +167,7 @@ void NRICP::addLandmarkCorrespondence()
    m_target->addLandmarkVertexIndex();
    m_landmarkCorrespondenceCount ++;
    m_landmarksChanged = true;
+
  }
 }
 
@@ -174,7 +175,7 @@ void NRICP::clearLandmarkCorrespondences()
 {
     m_template->clearLandmarkVertexIndices();
     m_target->clearLandmarkVertexIndices();
-    m_hasLandmark->resize(0);
+    m_hasLandmark->setZero();
     m_landmarkCorrespondenceCount = 0;
     m_landmarksChanged = true;
 }
@@ -196,10 +197,11 @@ void NRICP::addLandmarkInformation()
      l2_point = m_target->getVertex(l2);
 
      //Template side in m_D
-     m_D->coeffRef(i, four_l1) = m_beta * l1_point[0];
-     m_D->coeffRef(i, four_l1 + 1) = m_beta * l1_point[1];
-     m_D->coeffRef(i, four_l1 + 2) = m_beta * l1_point[2];
-     m_D->coeffRef(i, four_l1 + 3) = m_beta * 1.0;
+     //TO DO: Change influence of landmarks
+     m_D->coeffRef(l1, four_l1) = m_beta * l1_point[0];
+     m_D->coeffRef(l1, four_l1 + 1) = m_beta * l1_point[1];
+     m_D->coeffRef(l1, four_l1 + 2) = m_beta * l1_point[2];
+     m_D->coeffRef(l1, four_l1 + 3) = 1.0;
 
      //Target side in m_U
      (*m_U)(l2, 0) = l2_point[0];
@@ -213,26 +215,12 @@ void NRICP::addLandmarkInformation()
 
 void NRICP::calculateRigidTransformation()
 {
-    //float previous_seconds = glfwGetTime();
-
-    //Approximates ICP, unstable
-    //determineRigidOptimalDeformation();
-    //deformTemplate();
-    //printf(" ICP takes %f seconds \n ", elapsed_seconds);
-
     //PCA
     m_template->moveToCentre();
     m_target->moveToCentre();
 
     m_template->rotateByEigenVectors();
     m_target->rotateByEigenVectors();
-
-    //TO DO: Fix hardcoded corrections
-   // m_template->rotateObject(0, 90, 180);
-   // m_target->rotateObject(0, -90, 0);
-
-    //float current_seconds = glfwGetTime();
-    //float elapsed_seconds = current_seconds - previous_seconds;
 }
 
 
@@ -244,7 +232,7 @@ void NRICP::calculateNonRigidTransformation()
    X_prev->setZero(4 * m_templateVertCount, 3);
    m_stiffnessChanged = true;
 
-   if(m_landmarksChanged)
+  if(m_landmarksChanged)
    {
      addLandmarkInformation();
      m_landmarksChanged = false;
@@ -282,12 +270,12 @@ void NRICP::findCorrespondences()
       float distance_right = 0.0;
       unsigned int three_i;
       m_W->setOnes();
-      m_U->setZero();
 
       for (unsigned int i = 0; i < m_templateVertCount; ++i)
       {
         if(!(*m_hasLandmark)(i))
          {
+              (*m_U)(i) = 0;
               three_i = 3*i;
               templateVertex[0] = vertsTemplate->at(three_i);
               templateVertex[1] = vertsTemplate->at(three_i + 1);
@@ -404,80 +392,7 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
         }
  }
 
-void NRICP::determineRigidOptimalDeformation()
-{
 
-    //TO FIX
-
-
-    //Find X = (At*A)-1 * At * B
-    unsigned int i;
-    unsigned int four_i;
-    unsigned int v1;
-    unsigned int v2;
-    unsigned int four_v1;
-    unsigned int four_v2;
-    unsigned int auxRowIndex;
-    unsigned int sizeRowsMG = 4 * m_templateEdgeCount;
-    unsigned int sizeRowsDl = m_landmarkCorrespondenceCount;
-    unsigned int sizeColsA = 4 * m_templateVertCount;
-
-//Resizing
-        float auxStiffness = m_stiffness;
-        m_stiffness = 100.0;
-        m_A->resize(sizeRowsMG + sizeRowsDl, sizeColsA);
-        m_B->resize(sizeRowsMG + sizeRowsDl, 3);
-        m_A->resizeNonZeros(2 * sizeRowsMG + 4 * sizeRowsDl);
-        m_B->resizeNonZeros(3 * sizeRowsDl);
-
-
-
- //Alpha * M * G
-        i = 0;
-        for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
-        {
-          four_i = 4 * i; //for all edges
-          v1 = it->first;
-          v2 = it->second;
-          four_v1 = 4 * v1;
-          four_v2 = 4 * v2;
-          m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
-          m_A->coeffRef(four_i + 1, four_v1 + 1) = (-1) * m_stiffness;
-          m_A->coeffRef(four_i + 2, four_v1 + 2) = (-1) * m_stiffness;
-          m_A->coeffRef(four_i + 3, four_v1 + 3) = (-1) * m_stiffness * m_gamma;
-          m_A->coeffRef(four_i, four_v2) = m_stiffness;
-          m_A->coeffRef(four_i + 1, four_v2 + 1) = m_stiffness;
-          m_A->coeffRef(four_i + 2, four_v2 + 2) = m_stiffness;
-          m_A->coeffRef(four_i + 3, four_v2 + 3) = m_stiffness * m_gamma;
-          i++;
-        }
-
-  //Beta * Dl and Ul
-        std::vector<int>* landmarks_template = m_template->getLandmarkVertexIndices();
-        std::vector<int>* landmarks_target = m_target->getLandmarkVertexIndices();
-        for(unsigned int i = 0; i < sizeRowsDl; ++i)
-        {
-         unsigned int l1 = landmarks_template->at(i);
-         unsigned int l2 = landmarks_target->at(i);
-         unsigned four_l1 = 4 * l1;
-         Vector3f point1 = m_template->getVertex(l1);
-         Vector3f point2 = m_target->getVertex(l2);
-
-         auxRowIndex = i + sizeRowsMG;
-
-         m_A->coeffRef(auxRowIndex, four_l1) = m_beta * point1[0];
-         m_A->coeffRef(auxRowIndex, four_l1 + 1) = m_beta * point1[1];
-         m_A->coeffRef(auxRowIndex, four_l1 + 2) = m_beta * point1[2];
-         m_A->coeffRef(auxRowIndex, four_l1 + 3) = m_beta;
-
-         m_B->coeffRef(auxRowIndex, 0) = point2[0];
-         m_B->coeffRef(auxRowIndex, 1) = point2[1];
-         m_B->coeffRef(auxRowIndex, 2) = point2[2];
-        }
-
-        m_stiffness = auxStiffness;
-        solveLinearSystem();
-}
 
 void NRICP::determineNonRigidOptimalDeformation()
   {

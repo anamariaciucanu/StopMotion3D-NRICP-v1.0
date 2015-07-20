@@ -99,8 +99,6 @@ class NRICP
     void findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
     ///@brief Fills in m_U with target correspondences for every template vertex
     void findCorrespondences();
-    ///@brief Finds m_X transformation matrix for the template mesh for ICP
-    void determineRigidOptimalDeformation();    
     ///@brief Finds m_X transformation matrix for the template mesh for NRICP
     void determineNonRigidOptimalDeformation();
     ///@brief Solves AX=B
