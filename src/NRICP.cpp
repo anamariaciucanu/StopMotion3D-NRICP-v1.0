@@ -70,7 +70,6 @@ void NRICP::initializeNRICP()
        m_targetPartition = createPartitions(0, m_targetVertCount-1, m_targetPartition);
 
     //Sparse matrices A and B
-    //Landmarks not included here
        m_templateEdgeCount = m_template->getEdgeCount();
 
     //Mighty matrices
@@ -221,6 +220,8 @@ void NRICP::calculateRigidTransformation()
 
     m_template->rotateByEigenVectors();
     m_target->rotateByEigenVectors();
+
+    m_template->rotateObject(0, 0, -180);
 }
 
 

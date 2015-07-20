@@ -234,7 +234,7 @@ void GLFWContainer::checkKeyPress()
       }
       if(m_nrICP_Segment)
       {
-        //  m_nrICP_Segment->addLandmarkCorrespondence();
+          m_nrICP_Segment->addLandmarkCorrespondence();
       }
       sleep(1.0);
     }
@@ -350,22 +350,22 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     float transformations[6] = {0.0, 0.0, 0.0, -0.7, 0.1, 0.0};
-   // loadMesh("../models/HelliDropter1.obj");
-    loadMesh("../models/Cube1.obj");
+    loadMesh("../models/HelliDropter1.obj");
+    //loadMesh("../models/Cube1.obj");
     m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);
     m_mesh[0]->calculateEigenvectors();
 
     transformations[3] = 0.7;
-    //loadMesh("../models/HelliDropter2.obj");
-    loadMesh("../models/Cube2.obj");
+    loadMesh("../models/HelliDropter2.obj");
+    //loadMesh("../models/Cube2.obj");
     m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[1]->moveObject(transformations[3], transformations[4], transformations[5]);
     m_mesh[1]->calculateEigenvectors();
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);
-    //m_nrICP_Segment = new NRICP_Segment(m_mesh[0], m_mesh[1]);
+    m_nrICP_Segment = new NRICP_Segment(m_mesh[0], m_mesh[1]);
     m_nrICP->initializeNRICP();
 
     loadLandmarks("../logs/landmarks_template.txt", "../logs/landmarks_target.txt");

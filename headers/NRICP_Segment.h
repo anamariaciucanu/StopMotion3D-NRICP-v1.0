@@ -16,6 +16,7 @@ private:
    unsigned int m_templateSegmentVertCount;
    unsigned int m_templateSegmentEdgeCount;
    unsigned int m_targetSegmentVertCount;
+   unsigned int m_landmarkCorrespondenceCount;
    std::vector<GLuint>* m_templateSegmentFaces;
    std::vector<GLuint>* m_targetSegmentFaces;
    std::vector<GLuint>* m_templateSegmentVertIndices;
@@ -26,8 +27,9 @@ private:
    float m_epsilon;
    float m_gamma;
    bool m_stiffnessChanged;
-   bool m_nricpStarted;
+   bool m_landmarksChanged;
 
+   VectorXi* m_hasLandmark;
    VectorXi* m_W;
    SparseMatrix<GLfloat>* m_D;
    MatrixXf* m_U;
@@ -40,7 +42,6 @@ private:
 
 
 public:
-
    NRICP_Segment(Mesh* _template, Mesh* _target);
    ~NRICP_Segment();
    void initializeNRICP();
@@ -53,7 +54,7 @@ public:
    void buildVertexMatrix();
    void initializeWUXVectors();
    void buildLandmarkArrays();
-
+   void addLandmarkInformation();
    void calculateNonRigidTransformation();
    void findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
    void findCorrespondences();
@@ -88,10 +89,6 @@ public:
 
 
    /// Setters and Getters for the private members
-   void setNRICPStarted(bool _value)
-   {
-       m_nricpStarted = _value;
-   }
 
    float getStiffness()
    {

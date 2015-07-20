@@ -13,17 +13,21 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
     m_epsilon = 4.0;
     m_gamma = 1.0;
 
-    //m_targetPartition = NULL;
+    m_targetPartition = NULL;
+    m_hasLandmark = new VectorXi();
     m_W = new VectorXi();
     m_U = new MatrixXf();
     m_X = new MatrixXf();
     m_A = new SparseMatrix<GLfloat>();
     m_B = new SparseMatrix<GLfloat>();
+    m_hasLandmark = new VectorXi();
+    m_D = NULL;
     m_templateSegmentVertIndices = new std::vector<GLuint>();
     m_targetSegmentVertIndices = new std::vector<GLuint>();
     m_templateLandmarks = new std::vector<GLuint>();
     m_targetLandmarks = new std::vector<GLuint>();
-    m_D = NULL;
+    m_landmarksChanged = false;
+    m_landmarkCorrespondenceCount = 0;
 }
 
 NRICP_Segment::~NRICP_Segment()
@@ -34,6 +38,7 @@ NRICP_Segment::~NRICP_Segment()
     m_A->resize(0, 0);
     m_B->resize(0, 0);
     m_D->resize(0, 0);
+    m_hasLandmark->resize(0);
 
     if (m_templateSegmentVertIndices) { delete [] m_templateSegmentVertIndices; }
     if (m_targetSegmentVertIndices) { delete [] m_targetSegmentVertIndices; }
@@ -41,8 +46,130 @@ NRICP_Segment::~NRICP_Segment()
     if (m_targetLandmarks) { delete []  m_targetLandmarks; }
 
     m_adjMat->clear();
-
     destroyPartitions(m_targetPartition);
+}
+
+
+SpherePartition* NRICP_Segment::createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition)
+{
+    unsigned int three_i;
+
+    //Observation: This assumes vertex data is in order
+    _partition = new SpherePartition();
+    _partition->start = _start;
+    _partition->end = _end;
+    _partition->average[0] = 0.0;
+    _partition->average[1] = 0.0;
+    _partition->average[2] = 0.0;
+
+    std::vector<GLfloat>* targetVerts = m_target->getVertices();
+
+    for(unsigned int i=_start; i<=_end; ++i)
+    {
+      three_i = 3 * m_targetSegmentVertIndices->at(i);
+      _partition->average[0] += targetVerts->at(three_i);
+      _partition->average[1] += targetVerts->at(three_i + 1);
+      _partition->average[2] += targetVerts->at(three_i + 2);
+    }
+
+     unsigned int noElem = _end - _start + 1;
+
+    _partition->average[0] /= noElem;
+    _partition->average[1] /= noElem;
+    _partition->average[2] /= noElem;
+
+    if(noElem > 3)
+    {
+     _partition->left = createPartitions(_start, _start+noElem/2, _partition->left);
+     _partition->right = createPartitions(_start+noElem/2+1, _end, _partition->right);
+    }
+
+    return _partition;
+}
+
+
+void NRICP_Segment::destroyPartitions(SpherePartition* _partition)
+{
+    if(_partition)
+    {
+        if(!_partition->left && !_partition->right)
+        {
+            delete _partition;
+        }
+
+        if (_partition->right)
+        {
+           destroyPartitions(_partition->right);
+        }
+
+        if (_partition->left)
+        {
+           destroyPartitions(_partition->left);
+        }
+    }
+}
+
+
+void NRICP_Segment::addLandmarkCorrespondence()
+{
+ int l1 = m_template->getPickedVertexIndex();
+ int l2 = m_target->getPickedVertexIndex();
+ int laux1, laux2;
+
+ if(l1 >=0 && l2 >= 0)
+ {
+   laux1 = findValue((unsigned int) l1, m_templateSegmentVertIndices);
+   laux2 = findValue((unsigned int) l2, m_targetSegmentVertIndices);
+   if(laux1 > 0 && laux2 > 0)
+     {
+      m_templateLandmarks->push_back(l1);
+      m_targetLandmarks->push_back(l2);
+      m_landmarkCorrespondenceCount++;
+     }
+ }
+    m_landmarksChanged = true;
+}
+
+
+void NRICP_Segment::clearLandmarkCorrespondences()
+{
+    m_templateLandmarks->clear();
+    m_targetLandmarks->clear();
+    m_hasLandmark->setZero();
+    m_landmarkCorrespondenceCount = 0;
+    m_landmarksChanged = true;
+}
+
+
+void NRICP_Segment::addLandmarkInformation()
+{
+   int four_l1, l1, l2;
+   Vector3f l1_point, l2_point;
+
+   for(unsigned int i = 0; i < m_landmarkCorrespondenceCount; ++i)
+   {
+     l1 = m_templateLandmarks->at(i);
+     l2 = m_targetLandmarks->at(i);
+     four_l1 = 4*l1;
+
+     l1_point = m_template->getVertex(m_templateSegmentVertIndices->at(l1));
+     l2_point = m_target->getVertex(m_targetSegmentVertIndices->at(l2));
+
+     //Template side in m_D
+     //TO DO: Change influence of landmarks
+     m_D->coeffRef(l1, four_l1) = m_beta * l1_point[0];
+     m_D->coeffRef(l1, four_l1 + 1) = m_beta * l1_point[1];
+     m_D->coeffRef(l1, four_l1 + 2) = m_beta * l1_point[2];
+     m_D->coeffRef(l1, four_l1 + 3) = 1.0;
+
+     //Target side in m_U
+     (*m_U)(l2, 0) = l2_point[0];
+     (*m_U)(l2, 1) = l2_point[1];
+     (*m_U)(l2, 2) = l2_point[2];
+
+     //Boolean value
+     (*m_hasLandmark)(l1) = 1;
+   }
 }
 
 
@@ -57,15 +184,26 @@ void NRICP_Segment::initializeNRICP()
     initializeWUXVectors();
     buildLandmarkArrays();
 
-    m_stiffness = 100.0;
+    m_stiffness = 10.0;
     m_stiffnessChanged = true;
-    m_nricpStarted = false;
+    m_hasLandmark->resize(m_templateSegmentVertCount);
+    m_hasLandmark->setZero();
 
     destroyPartitions(m_targetPartition);
     m_targetPartition = createPartitions(0, m_targetSegmentVertCount-1, m_targetPartition);
 
-    m_A->resize(4 * m_templateSegmentEdgeCount, 4 * m_templateSegmentVertCount);
-    m_B->resize(4 * m_templateSegmentEdgeCount, 3);
+    //Sparse matrices A and B
+       m_templateSegmentEdgeCount = m_adjMat->size();
+
+    //Mighty matrices
+       unsigned int sizeRowsMG = 4 * m_templateSegmentEdgeCount;
+       unsigned int sizeRowsWD = m_templateSegmentVertCount;
+       unsigned int sizeColsA = 4 * m_templateSegmentVertCount;
+
+       m_A->resize(sizeRowsMG + sizeRowsWD, sizeColsA);
+       m_B->resize(sizeRowsMG + sizeRowsWD, 3);
+       m_A->resizeNonZeros(2 * sizeRowsMG + 4 * sizeRowsWD);
+       m_B->resizeNonZeros(3 * m_templateSegmentVertCount);
 }
 
 
@@ -119,9 +257,6 @@ void NRICP_Segment::buildArcNodeMatrix()
      unsigned int faceCountTemplate = m_templateSegmentFaces->size()/3;
 
      //Mesh vert indices turned into segment indices
-     //TO DO: Need to put in segment indices
-
-
      for (unsigned int i = 0; i < faceCountTemplate ; ++i)
      {
         three_i = 3*i;
@@ -198,6 +333,7 @@ void NRICP_Segment::initializeWUXVectors()
     m_X->setZero(4 * m_templateSegmentVertCount, 3);
 }
 
+
 void NRICP_Segment::buildLandmarkArrays()
 {
   std::vector<int>* templateLandmarks = m_template->getLandmarkVertexIndices();
@@ -233,79 +369,22 @@ void NRICP_Segment::buildLandmarkArrays()
   }
 }
 
-SpherePartition* NRICP_Segment::createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition)
-{
-    unsigned int three_i;
-
-    //Observation: This assumes vertex data is in order
-    _partition = new SpherePartition();
-    _partition->start = _start;
-    _partition->end = _end;
-    _partition->average[0] = 0.0;
-    _partition->average[1] = 0.0;
-    _partition->average[2] = 0.0;
-
-    std::vector<GLfloat>* targetVerts = m_target->getVertices();
-
-    for(unsigned int i=_start; i<=_end; ++i)
-    {
-      three_i = 3 * m_targetSegmentVertIndices->at(i);
-      _partition->average[0] += targetVerts->at(three_i);
-      _partition->average[1] += targetVerts->at(three_i + 1);
-      _partition->average[2] += targetVerts->at(three_i + 2);
-    }
-
-     unsigned int noElem = _end - _start + 1;
-
-    _partition->average[0] /= noElem;
-    _partition->average[1] /= noElem;
-    _partition->average[2] /= noElem;
-
-    if(noElem > 3)
-    {
-     _partition->left = createPartitions(_start, _start+noElem/2, _partition->left);
-     _partition->right = createPartitions(_start+noElem/2, _end, _partition->right);
-    }
-
-    return _partition;
-}
-
-
-void NRICP_Segment::destroyPartitions(SpherePartition* _partition)
-{
-    if(_partition)
-    {
-        if(!_partition->left && !_partition->right)
-        {
-            delete _partition;
-        }
-
-        if (_partition->right)
-        {
-           destroyPartitions(_partition->right);
-        }
-
-        if (_partition->left)
-        {
-           destroyPartitions(_partition->left);
-        }
-    }
-}
-
-
 
 //Nonrigid transformations
-
 void NRICP_Segment::calculateNonRigidTransformation()
 {
-   m_nricpStarted = true;
-
    float previous_seconds = glfwGetTime();
 
    MatrixXf* X_prev = new MatrixXf(4 * m_templateSegmentVertCount, 3);
    X_prev->setZero(4 * m_templateSegmentVertCount, 3);
    m_stiffnessChanged = true;
 
+
+   if(m_landmarksChanged)
+    {
+      addLandmarkInformation();
+      m_landmarksChanged = false;
+    }
    findCorrespondences();
    determineNonRigidOptimalDeformation();
    deformTemplate();
@@ -341,18 +420,20 @@ void NRICP_Segment::findCorrespondences()
 
       for (unsigned int i=0; i<m_templateSegmentVertCount; ++i)
       {
-          three_i = 3 * m_templateSegmentVertIndices->at(i);
-          templateVertex[0] = templateVerts->at(three_i);
-          templateVertex[1] = templateVerts->at(three_i + 1);
-          templateVertex[2] = templateVerts->at(three_i + 2);
-          SpherePartition* previous = NULL;
-          SpherePartition* aux = NULL;
-          SpherePartition* current = m_targetPartition;
-
-          while(current)
+          if(!(*m_hasLandmark)(i))
           {
-              Vector3f targetSphere_left(1000.0, 1000.0, 1000.0);
-              Vector3f targetSphere_right(1000.0, 1000.0, 1000.0);
+           three_i = 3 * m_templateSegmentVertIndices->at(i);
+           templateVertex[0] = templateVerts->at(three_i);
+           templateVertex[1] = templateVerts->at(three_i + 1);
+           templateVertex[2] = templateVerts->at(three_i + 2);
+           SpherePartition* previous = NULL;
+           SpherePartition* aux = NULL;
+           SpherePartition* current = m_targetPartition;
+
+           while(current)
+           {
+             Vector3f targetSphere_left(1000.0, 1000.0, 1000.0);
+             Vector3f targetSphere_right(1000.0, 1000.0, 1000.0);
 
               if(current->left)
               {
@@ -394,8 +475,8 @@ void NRICP_Segment::findCorrespondences()
           {
             (*m_W)(i) = 0.0;
           }
-          ++i;
-      }
+        }
+    }
 }
 
 void NRICP_Segment::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
@@ -473,15 +554,6 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
     unsigned int sizeColsA = 4 * m_templateSegmentVertCount;
     unsigned int weight;
 
-//Resizing
-   if(m_nricpStarted)
-   {
-     m_A->resize(sizeRowsMG + sizeRowsWD + sizeRowsDl, sizeColsA);
-     m_B->resize(sizeRowsMG + sizeRowsWD + sizeRowsDl, 3);
-     m_A->resizeNonZeros(2 * sizeRowsMG + sizeRowsWD + 4 * sizeRowsDl);
-     m_B->resizeNonZeros(3 * (m_templateSegmentVertCount + sizeRowsDl));
-   }
-
  //Alpha * M * G
    if(m_stiffnessChanged)
    {
@@ -523,32 +595,6 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
      m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1);
      m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2);
     }
-
-  //Beta * Dl and Ul
-     if(m_nricpStarted)
-     {
-        for(unsigned int i = 0; i < sizeRowsDl; ++i)
-        {
-         int l1 = m_templateLandmarks->at(i);
-         int l2 = m_targetLandmarks->at(i);
-         four_l1 = 4 * l1;
-         Vector3f point1 = m_template->getVertex(l1);
-         Vector3f point2 = m_target->getVertex(l2);
-
-         auxRowIndex = i + sizeRowsWD + sizeRowsMG;
-
-         m_A->coeffRef(auxRowIndex, four_l1) = m_beta * point1[0];
-         m_A->coeffRef(auxRowIndex, four_l1 + 1) = m_beta * point1[1];
-         m_A->coeffRef(auxRowIndex, four_l1 + 2) = m_beta * point1[2];
-         m_A->coeffRef(auxRowIndex, four_l1 + 3) = m_beta;
-
-         m_B->coeffRef(auxRowIndex, 0) = point2[0];
-         m_B->coeffRef(auxRowIndex, 1) = point2[1];
-         m_B->coeffRef(auxRowIndex, 2) = point2[2];
-        }
-
-        m_nricpStarted = false;
-     }
 
 
      solveLinearSystem();
@@ -602,30 +648,8 @@ void NRICP_Segment::deformTemplate()
   }
 
 
-void NRICP_Segment::addLandmarkCorrespondence()
-{
- int l1 = m_template->getPickedVertexIndex();
- int l2 = m_target->getPickedVertexIndex();
 
- if(l1 >=0 && l2 >= 0)
- {
-   if(findValue((unsigned int) l1, m_templateSegmentVertIndices) >= 0)
-     {
-       m_templateLandmarks->push_back(l1);
-     }
-
-   if(findValue((unsigned int) l2, m_targetSegmentVertIndices) >= 0)
-     {
-       m_targetLandmarks->push_back(l2);
-     }
- }
-}
-
-void NRICP_Segment::clearLandmarkCorrespondences()
-{
-    m_templateLandmarks->clear();
-    m_targetLandmarks->clear();
-}
+//Auxiliaries ---------------------------------------------------------------------------
 
 
 float NRICP_Segment::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
