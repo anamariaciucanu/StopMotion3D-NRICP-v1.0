@@ -101,10 +101,15 @@ class Mesh
     Segmentation* m_segmentationRoot;
 ///@brief Segments from tree
     std::vector< std::vector<GLuint>* > m_segments;
+///@brief Segmentation planes
+    std::vector<Vector3i> m_segmentationPlanes;
+///@brief Used for drawing order in VAO
     std::vector<GLuint>* m_segmentsIndices;
 ///@brief int indicating the active segment to be used and displayed
     int m_activeSegment;
+    int m_activeSegmentationPlane;
     bool m_segmentationMode;
+
 
  public:
  ///@brief ctor for Mesh class
@@ -188,7 +193,7 @@ class Mesh
 ///@brief Segmentation
     void segmentMesh();
     void splitSegmentIntoSubsegments(Segmentation* _segment, std::vector<GLuint>* _parentFaces, Vector3f _planeCentre, Vector3f _planeNormal);
-    Segmentation* segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation *_root, std::vector<GLuint> *_rootSideFaces);
+    Segmentation* segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation *_root, std::vector<GLuint> *_parentSideFaces);
     void createSegmentList();
     void destroySegments(Segmentation *_segmentation);
     Vector3f calculateCentre(int _p1, int _p2, int _p3);
@@ -277,10 +282,26 @@ class Mesh
         return m_segments.size();
     }
 
+    bool isSegmentationMode()
+    {
+      return m_segmentationMode;
+    }
+
+    void setSegmentationMode(bool _segmentationMode)
+    {
+      m_segmentationMode = _segmentationMode;
+    }
+
     int getActiveSegmentNumber()
     {
         return m_activeSegment;
     }
+
+    void setActiveSegmentNumber(int _value)
+    {
+        m_activeSegment = _value;
+    }
+
 
     std::vector<GLuint>* getActiveSegment()
     {
@@ -291,14 +312,24 @@ class Mesh
         return NULL;
     }
 
-    bool isSegmentationMode()
+    int getActiveSegmentationPlaneNumber()
     {
-      return m_segmentationMode;
+      return m_activeSegmentationPlane;
     }
 
-    void setSegmentationMode(bool _segmentationMode)
+    void setActiveSegmentationPlaneNumber(int _value)
     {
-      m_segmentationMode = _segmentationMode;
+        m_activeSegmentationPlane = _value;
+    }
+
+    Vector3i getActivePlane()
+    {
+        if(m_activeSegmentationPlane >= 0)
+        {
+         return m_segmentationPlanes.at(m_activeSegmentationPlane);
+        }
+
+        return Vector3i(-1, -1, -1);
     }
 
 };

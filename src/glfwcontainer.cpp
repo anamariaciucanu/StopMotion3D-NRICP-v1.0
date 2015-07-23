@@ -227,7 +227,7 @@ void GLFWContainer::checkKeyPress()
 
     else if(glfwGetKey(m_window, GLFW_KEY_C)){
      m_mesh[0]->segmentMesh();
-     m_mesh[1]->segmentMesh();
+     m_mesh[1]->segmentMesh();     
      m_nrICP_Segment->initializeNRICP();
      sleep(1.0);
     }   

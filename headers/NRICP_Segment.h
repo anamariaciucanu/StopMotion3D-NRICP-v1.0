@@ -16,7 +16,7 @@ private:
    unsigned int m_templateSegmentVertCount;
    unsigned int m_templateSegmentEdgeCount;
    unsigned int m_targetSegmentVertCount;
-   unsigned int m_landmarkCorrespondenceCount;
+   unsigned int m_landmarkSegmentCorrespCount;
    std::vector<GLuint>* m_templateSegmentFaces;
    std::vector<GLuint>* m_targetSegmentFaces;
    std::vector<GLuint>* m_templateSegmentVertIndices;
@@ -30,15 +30,15 @@ private:
    bool m_landmarksChanged;
 
    VectorXi* m_hasLandmark;
-   VectorXi* m_W;
+   VectorXf* m_W;
    SparseMatrix<GLfloat>* m_D;
    MatrixXf* m_U;
    MatrixXf* m_X;
    SpherePartition* m_targetPartition;
    SparseMatrix<GLfloat, ColMajor>* m_A;
    SparseMatrix<GLfloat, ColMajor>* m_B;
-   std::vector<unsigned int>* m_templateLandmarks;
-   std::vector<unsigned int>* m_targetLandmarks;
+   std::vector<unsigned int>* m_templateSegmentLandmarks;
+   std::vector<unsigned int>* m_targetSegmentLandmarks;
 
 
 public:
@@ -84,8 +84,8 @@ public:
    void addLandmarkCorrespondence();
    void clearLandmarkCorrespondences();
    int findValue(unsigned int _value, std::vector<GLuint>* _vector);
-
-
+   float calculateSegmentPlaneProximity(int _i);
+   float maxDistanceFromPoint(Vector3f _point);
 
 
    /// Setters and Getters for the private members

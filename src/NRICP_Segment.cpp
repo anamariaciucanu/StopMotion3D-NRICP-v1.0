@@ -2,8 +2,8 @@
 #include <OrderingMethods>
 #include <set>
 
-//TO DO: m_landmarkCorrespChanged not used anywhere
 
+//Indices are related to segment
 
 NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
 {
@@ -15,7 +15,7 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
 
     m_targetPartition = NULL;
     m_hasLandmark = new VectorXi();
-    m_W = new VectorXi();
+    m_W = new VectorXf();
     m_U = new MatrixXf();
     m_X = new MatrixXf();
     m_A = new SparseMatrix<GLfloat, ColMajor>();
@@ -24,10 +24,10 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
     m_D = NULL;
     m_templateSegmentVertIndices = new std::vector<GLuint>();
     m_targetSegmentVertIndices = new std::vector<GLuint>();
-    m_templateLandmarks = new std::vector<GLuint>();
-    m_targetLandmarks = new std::vector<GLuint>();
+    m_templateSegmentLandmarks = new std::vector<GLuint>();
+    m_targetSegmentLandmarks = new std::vector<GLuint>();
     m_landmarksChanged = false;
-    m_landmarkCorrespondenceCount = 0;
+    m_landmarkSegmentCorrespCount = 0;
 }
 
 NRICP_Segment::~NRICP_Segment()
@@ -42,8 +42,8 @@ NRICP_Segment::~NRICP_Segment()
 
     if (m_templateSegmentVertIndices) { delete [] m_templateSegmentVertIndices; }
     if (m_targetSegmentVertIndices) { delete [] m_targetSegmentVertIndices; }
-    if (m_templateLandmarks) { delete [] m_templateLandmarks; }
-    if (m_targetLandmarks) { delete []  m_targetLandmarks; }
+    if (m_templateSegmentLandmarks) { delete [] m_templateSegmentLandmarks; }
+    if (m_targetSegmentLandmarks) { delete []  m_targetSegmentLandmarks; }
 
     m_adjMat->clear();
     destroyPartitions(m_targetPartition);
@@ -122,9 +122,9 @@ void NRICP_Segment::addLandmarkCorrespondence()
    laux2 = findValue((unsigned int) l2, m_targetSegmentVertIndices);
    if(laux1 > 0 && laux2 > 0)
      {
-      m_templateLandmarks->push_back(laux1);
-      m_targetLandmarks->push_back(laux2);
-      m_landmarkCorrespondenceCount++;
+      m_templateSegmentLandmarks->push_back(laux1);
+      m_targetSegmentLandmarks->push_back(laux2);
+      m_landmarkSegmentCorrespCount++;
      }
  }
     m_landmarksChanged = true;
@@ -133,10 +133,10 @@ void NRICP_Segment::addLandmarkCorrespondence()
 
 void NRICP_Segment::clearLandmarkCorrespondences()
 {
-    m_templateLandmarks->clear();
-    m_targetLandmarks->clear();
-    m_hasLandmark->setZero();
-    m_landmarkCorrespondenceCount = 0;
+    m_templateSegmentLandmarks->clear();
+    m_targetSegmentLandmarks->clear();
+    m_hasLandmark->setZero(m_templateSegmentVertCount);
+    m_landmarkSegmentCorrespCount = 0;
     m_landmarksChanged = true;
 }
 
@@ -147,15 +147,16 @@ void NRICP_Segment::addLandmarkInformation()
     {
       m_beta = 1.0;
       m_landmarksChanged = false;
+      m_hasLandmark->setZero(m_templateSegmentVertCount);
     }
 
    int four_l1, l1, l2;
    Vector3f l1_point, l2_point;
 
-   for(unsigned int i = 0; i < m_landmarkCorrespondenceCount; ++i)
+   for(unsigned int i = 0; i < m_landmarkSegmentCorrespCount; ++i)
    {
-     l1 = m_templateLandmarks->at(i);
-     l2 = m_targetLandmarks->at(i);
+     l1 = m_templateSegmentLandmarks->at(i);
+     l2 = m_targetSegmentLandmarks->at(i);
      four_l1 = 4 * l1;
 
      l1_point = m_template->getVertex(m_templateSegmentVertIndices->at(l1));
@@ -346,8 +347,8 @@ void NRICP_Segment::buildLandmarkArrays()
   int sizeTemplateLandmarks = (templateLandmarks) ? templateLandmarks->size() : 0;
   int sizeTargetLandmarks = (targetLandmarks) ? targetLandmarks->size() : 0;
 
-  m_templateLandmarks->clear();
-  m_targetLandmarks->clear();
+  m_templateSegmentLandmarks->clear();
+  m_targetSegmentLandmarks->clear();
 
   int segmentLandmarkIndex;
 
@@ -358,7 +359,7 @@ void NRICP_Segment::buildLandmarkArrays()
 
     if(segmentLandmarkIndex >= 0)
     {
-        m_templateLandmarks->push_back(segmentLandmarkIndex);
+        m_templateSegmentLandmarks->push_back(segmentLandmarkIndex);
     }
   }
 
@@ -368,7 +369,7 @@ void NRICP_Segment::buildLandmarkArrays()
 
       if(segmentLandmarkIndex >= 0)
       {
-          m_targetLandmarks->push_back(segmentLandmarkIndex);
+          m_targetSegmentLandmarks->push_back(segmentLandmarkIndex);
       }
   }
 }
@@ -412,7 +413,6 @@ void NRICP_Segment::findCorrespondences()
       float distance_left = 0.0;
       float distance_right = 0.0;
       m_W->setOnes();
-      m_U->setZero();
 
       unsigned int three_i;
       std::vector<GLfloat>* templateVerts = m_template->getVertices();
@@ -475,6 +475,12 @@ void NRICP_Segment::findCorrespondences()
             (*m_W)(i) = 0.0;
           }
         }
+
+       //Distance plane weight
+          if((*m_W)(i) > 0.0)
+          {
+            (*m_W)(i) = calculateSegmentPlaneProximity(i);
+          }
     }
 }
 
@@ -547,7 +553,7 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
     unsigned int four_v2;
     unsigned int auxRowIndex;
     unsigned int sizeRowsMG = 4 * m_templateSegmentEdgeCount;
-    unsigned int weight;
+    float weight;
 
  //Alpha * M * G
    if(m_stiffnessChanged)
@@ -585,10 +591,9 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
      m_A->coeffRef(auxRowIndex, four_i + 2) = m_D->coeff(i, four_i + 2) * weight;
      m_A->coeffRef(auxRowIndex, four_i + 3) = m_D->coeff(i, four_i + 3) * weight;
 
-     //Weight already added
-     m_B->coeffRef(auxRowIndex, 0) = (*m_U)(i, 0);
-     m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1);
-     m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2);
+     m_B->coeffRef(auxRowIndex, 0) = (*m_U)(i, 0) * weight;
+     m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1) * weight;
+     m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;
     }
 
 
@@ -694,4 +699,31 @@ int NRICP_Segment::findValue(unsigned int _value, std::vector<GLuint>* _vector)
     return result;
 }
 
+float NRICP_Segment::calculateSegmentPlaneProximity(int _i)
+{
+  Vector3f templateIndex = m_template->getVertex(m_templateSegmentVertIndices->at(_i));
+  Vector3i segmentationPlane = m_template->getActivePlane();
+  Vector3f planeCenter = m_template->calculateCentre(segmentationPlane[0], segmentationPlane[1], segmentationPlane[2]);
+  float distance = euclideanDistance(templateIndex, planeCenter);
+  float proximityRatio = sin(distance);
 
+  return proximityRatio;
+}
+
+float NRICP_Segment::maxDistanceFromPoint(Vector3f _point)
+{
+  float maxDistance = -1;
+
+  for(unsigned int i = 0; i < m_templateSegmentVertCount; ++i)
+  {
+      Vector3f vert = m_template->getVertex(m_templateSegmentVertIndices->at(i));
+      float distance = euclideanDistance(vert, _point);
+
+      if(distance > maxDistance)
+      {
+        maxDistance = distance;
+      }
+  }
+
+  return maxDistance;
+}

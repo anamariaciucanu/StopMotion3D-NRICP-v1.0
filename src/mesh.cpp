@@ -8,6 +8,8 @@
 //TO DO: Fix normals issue (normal count >> vert count?)
 //Temp fix: Calculate my own normals when loading mesh
 
+//Indices are related to mesh
+
 using namespace Eigen;
 
 Mesh::Mesh()
@@ -34,6 +36,7 @@ Mesh::Mesh()
     m_segmentationMode = false;
     m_segmentsIndices = new std::vector<GLuint>();
     m_activeSegment = -1;
+    m_activeSegmentationPlane = -1;
 }
 
 Mesh::~Mesh()
@@ -1083,6 +1086,7 @@ void Mesh::segmentMesh()
         createSegmentList();
         m_segmentationMode = true;
         m_activeSegment = 0;
+        m_activeSegmentationPlane = m_segmentationPlanes.size()-1;
     }
     else
     {
@@ -1090,9 +1094,9 @@ void Mesh::segmentMesh()
     }
 }
 
-void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>* _rootSideFaces, Vector3f _planeCentre, Vector3f _planeNormal)
+void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>* _parentSideFaces, Vector3f _planeCentre, Vector3f _planeNormal)
 {
-    unsigned int size = _rootSideFaces->size();
+    unsigned int size = _parentSideFaces->size();
     unsigned int three_i;
     float dot_directions;
     Vector3f faceCentre;
@@ -1102,9 +1106,9 @@ void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>*
     for(unsigned int i=0; i<size/3; ++i)
     {
      three_i = 3*i;
-     face[0] = _rootSideFaces->at(three_i);
-     face[1] = _rootSideFaces->at(three_i + 1);
-     face[2] = _rootSideFaces->at(three_i + 2);
+     face[0] = _parentSideFaces->at(three_i);
+     face[1] = _parentSideFaces->at(three_i + 1);
+     face[2] = _parentSideFaces->at(three_i + 2);
 
      faceCentre = calculateCentre(face[0], face[1], face[2]);
      planeFaceDirection = faceCentre - _planeCentre;
@@ -1129,7 +1133,7 @@ void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>*
 }
 
 
-Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation* _root, std::vector<GLuint>* _rootSideFaces)
+Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation* _root, std::vector<GLuint>* _parentSideFaces)
 {
     if(_root)
     {
@@ -1147,16 +1151,15 @@ Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Seg
         _root->m_rightFaces = new std::vector<GLuint>();
         Vector3f planeCentre = calculateCentre(_plane[0], _plane[1], _plane[2]);
 
-      if(_rootSideFaces)
+      if(_parentSideFaces)
         {
           //Parent exists
-
           //Side
-          splitSegmentIntoSubsegments(_root, _rootSideFaces, planeCentre, _normal);
+          splitSegmentIntoSubsegments(_root, _parentSideFaces, planeCentre, _normal);
 
 
           //Clear parent
-          _rootSideFaces->clear();
+          _parentSideFaces->clear();
          }
       else
          {
@@ -1187,8 +1190,8 @@ void Mesh::createSegmentList()
         if(!current->m_visited)
         {
           current->m_visited = true;
-          stack.push_back(current->m_leftSegment);
           stack.push_back(current->m_rightSegment);
+          stack.push_back(current->m_leftSegment);
         }
         else
         {
@@ -1199,6 +1202,7 @@ void Mesh::createSegmentList()
       {
           m_segments.push_back(current->m_leftFaces);
           m_segments.push_back(current->m_rightFaces);
+          m_segmentationPlanes.push_back(current->m_plane);
           stack.pop_back();
       }
   }
@@ -1257,6 +1261,7 @@ Vector3f Mesh::calculateCentre(int _p1, int _p2, int _p3)
 
    return (point1 + point2 + point3)/3;
 }
+
 
 
 
