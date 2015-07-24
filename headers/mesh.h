@@ -64,17 +64,17 @@ class Mesh
     std::vector<GLuint>* m_faceIndices;
  ///@brief Vector of size 3, representing the mesh's average position
     Vector3f m_position;
- ///@brief Unsigned integer variable -> the number of edges
-    unsigned int m_edgeCount;
+ ///@brief GLuinteger variable -> the number of edges
+    GLuint m_edgeCount;
  ///@brief Unsigned integer variable -> the number of vertices
-    unsigned int m_vertCount;
+    GLuint m_vertCount;
  ///@brief Unsigned integer variable -> the number of faces
-    unsigned int m_faceCount;
+    GLuint m_faceCount;
  ///@brief Unsigned integer variable -> the number of texture coordinate pairs?
-    unsigned int m_texCoordCount;
+    GLuint m_texCoordCount;
  ///@brief Pointer to a set of pairs of unsigned integers -> a list of directed edges (smaller index -> larger index)
  ///corresponds to the arc-node matrix
-    std::set <std::pair<unsigned int, unsigned int> >* m_adjMat;
+    std::set <std::pair<GLuint, GLuint> >* m_adjMat;
  ///@brief Pointer to a Sparse Matrix of GLfloats, from the Eigen library -> contains the vertex floats in a n x 4n matrix (n = m_vertCount)
     SparseMatrix<GLfloat>* m_D;
  ///@brief Neighbour list
@@ -162,22 +162,22 @@ class Mesh
     }
 ///@brief rotates mesh
 ///@param [in] _angleX, _angleY, _angleZ -> angles around X, Y and Z axes
-    void rotateObject(float _angleX, float _angleY, float _angleZ);
+    void rotateObject(GLfloat _angleX, GLfloat _angleY, GLfloat _angleZ);
 
     void rotateObject(Matrix3f _R);
 
 ///@brief moves mesh
 /// @param [in] _tX, _tY, _tZ -> distances to be translated along X, Y and X axes
-    void moveObject(float _tX, float _tY, float _tZ);
+    void moveObject(GLfloat _tX, GLfloat _tY, GLfloat _tZ);
     void moveObject(Vector3f _trans);
 ///@brief Normalise normals to [-1,1]^3 interval
     void normaliseNormals();
 ///@brief Euclidean distance between two vertices
 ///@param [in] _v1, _v2 first and second vertices
-    float euclideanDistance(Vector3f _v1, Vector3f _v2);
+    GLfloat euclideanDistance(Vector3f _v1, Vector3f _v2);
 ///@brief Calculates and returnes the Gaussian curvature of a vertex
 ///@param [in] _index  the index of the vertex whose curvature we are calculating
-    float calculateVertexCurvature(int _index);
+    GLfloat calculateVertexCurvature(int _index);
 ///@brief Calculates the average position of the mesh
     void calculatePosition();
 ///@brief find if neighbour2 is in the list of neighbours of neighbour1
@@ -202,22 +202,22 @@ class Mesh
 /// Setters and Getters of the private members
     std::vector<GLfloat>* getVertices(){ return m_vertices; }
     std::vector<GLfloat>* getNormals(){ return m_normals; }
-    unsigned int getVertCount() { return m_vertCount; }
-    unsigned int getFaceCount() { return m_faceCount; }
+    GLuint getVertCount() { return m_vertCount; }
+    GLuint getFaceCount() { return m_faceCount; }
     std::vector<GLuint>* getFaceIndices() { return m_faceIndices; }
-    unsigned int getEdgeCount() { return m_edgeCount; }
-    unsigned int getTexCoordCount() { return m_texCoordCount; }
+    GLuint getEdgeCount() { return m_edgeCount; }
+    GLuint getTexCoordCount() { return m_texCoordCount; }
     GLuint getVAO() { return m_vao; }
     void setVAO(GLuint _vao) { m_vao = _vao; }
-    std::set <std::pair<unsigned int, unsigned int> >* getAdjMat(){ return m_adjMat; }
-    SparseMatrix<float>* getD(){ return m_D; }
-    float x() { return m_position[0]; }
-    float y() { return m_position[1]; }
-    float z() { return m_position[2]; }
+    std::set <std::pair<GLuint, GLuint> >* getAdjMat(){ return m_adjMat; }
+    SparseMatrix<GLfloat>* getD(){ return m_D; }
+    GLfloat x() { return m_position[0]; }
+    GLfloat y() { return m_position[1]; }
+    GLfloat z() { return m_position[2]; }
     Vector3f getPosition() { return m_position; }
-    Vector3f getNormal(unsigned int _vertNo);
-    Vector3f getVertex(unsigned int _vertNo);
-    void setVertex(unsigned int _vertNo, Vector3f _value);
+    Vector3f getNormal(GLuint _vertNo);
+    Vector3f getVertex(GLuint _vertNo);
+    void setVertex(GLuint _vertNo, Vector3f _value);
     std::vector<int>* getLandmarkVertexIndices()
     {
      return m_landmarkVertexIndices;
@@ -267,7 +267,7 @@ class Mesh
         return m_eigenvectors;
     }
 
-    std::vector<GLuint>* getSegment(unsigned int _i)
+    std::vector<GLuint>* getSegment(GLuint _i)
     {
         if(_i < m_segments.size())
         {
@@ -277,7 +277,7 @@ class Mesh
         return NULL;
     }
 
-    unsigned int getSegmentCount()
+    GLuint getSegmentCount()
     {
         return m_segments.size();
     }
@@ -330,6 +330,11 @@ class Mesh
         }
 
         return Vector3i(-1, -1, -1);
+    }
+
+    void setNextActiveSegment()
+    {
+        m_activeSegment = (m_activeSegment + 1) % m_segments.size();
     }
 
 };

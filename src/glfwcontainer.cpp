@@ -230,7 +230,16 @@ void GLFWContainer::checkKeyPress()
      m_mesh[1]->segmentMesh();     
      m_nrICP_Segment->initializeNRICP();
      sleep(1.0);
-    }   
+    }
+
+    else if(glfwGetKey(m_window, GLFW_KEY_N))
+    {
+     m_mesh[0]->setNextActiveSegment();
+     m_mesh[1]->setNextActiveSegment();
+     m_nrICP_Segment->initializeNRICP();
+
+     sleep(1.0);
+    }
 
     else if(glfwGetKey(m_window, GLFW_KEY_L)){
       if(m_nrICP)
@@ -480,12 +489,14 @@ void GLFWContainer::loopDrawing()
            {
              if(m_mesh[i]->isWireframe())
              {
-              glDrawElements(GL_LINES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+              glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
              }
              else
              {
-              glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
+              glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
              }
+
+             glDrawElements(GL_TRIANGLES, m_mesh[i]->getFaceCount()*3, GL_UNSIGNED_INT, (GLvoid*)0);
            }
 
              m_mesh[i]->unbindVAOs();

@@ -9,26 +9,64 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
     m_target = _target;
+
+    m_landmarkSegmentCorrespCount = 0;
     m_beta = 1.0;
     m_epsilon = 3.0;
     m_gamma = 1.0;
+    m_landmarksChanged = false;
+
+    m_templateSegmentVertIndices = new std::vector<GLuint>();
+    m_targetSegmentVertIndices = new std::vector<GLuint>();
+    m_templateSegmentLandmarks = new std::vector<GLuint>();
+    m_targetSegmentLandmarks = new std::vector<GLuint>();
+    m_adjMat = NULL;
 
     m_targetPartition = NULL;
     m_hasLandmark = new VectorXi();
     m_W = new VectorXf();
     m_U = new MatrixXf();
     m_X = new MatrixXf();
+    m_D = NULL;
     m_A = new SparseMatrix<GLfloat, ColMajor>();
     m_B = new SparseMatrix<GLfloat, ColMajor>();
-    m_hasLandmark = new VectorXi();
-    m_D = NULL;
-    m_templateSegmentVertIndices = new std::vector<GLuint>();
-    m_targetSegmentVertIndices = new std::vector<GLuint>();
-    m_templateSegmentLandmarks = new std::vector<GLuint>();
-    m_targetSegmentLandmarks = new std::vector<GLuint>();
-    m_landmarksChanged = false;
-    m_landmarkSegmentCorrespCount = 0;
 }
+
+
+void NRICP_Segment::initializeNRICP()
+{
+    m_templateSegmentFaces = m_template->getActiveSegment();
+    m_targetSegmentFaces = m_target->getActiveSegment();
+
+    m_stiffness = 100.0;
+    m_stiffnessChanged = true;
+
+    buildVertexIndexArrays(); //Segment indices holding mesh indices
+    buildArcNodeMatrix(); //m_adjMat
+    buildVertexMatrix(); //m_D
+    initializeWUXVectors(); //m_W, m_U, m_X
+    buildLandmarkArrays(); //landmarks in segment indices
+
+    m_hasLandmark->resize(m_templateSegmentVertCount);
+    m_hasLandmark->setZero();
+
+    destroyPartitions(m_targetPartition);
+    m_targetPartition = createPartitions(0, m_targetSegmentVertCount-1, m_targetPartition);
+
+    //Sparse matrices A and B
+       m_templateSegmentEdgeCount = m_adjMat->size();
+
+    //Mighty matrices
+       GLuint sizeRowsMG = 4 * m_templateSegmentEdgeCount;
+       GLuint sizeColsA = 4 * m_templateSegmentVertCount;
+
+       m_A->resize(sizeRowsMG + m_templateSegmentVertCount, sizeColsA);
+       m_B->resize(sizeRowsMG + m_templateSegmentVertCount, 3);
+       m_A->reserve(2 * sizeRowsMG + sizeColsA);
+       m_B->reserve(3 * m_templateSegmentVertCount);
+}
+
+
 
 NRICP_Segment::~NRICP_Segment()
 {
@@ -50,9 +88,9 @@ NRICP_Segment::~NRICP_Segment()
 }
 
 
-SpherePartition* NRICP_Segment::createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition)
+SpherePartition* NRICP_Segment::createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition)
 {
-    unsigned int three_i;
+    GLuint three_i;
 
     //Observation: This assumes vertex data is in order
     _partition = new SpherePartition();
@@ -64,7 +102,7 @@ SpherePartition* NRICP_Segment::createPartitions(unsigned int _start, unsigned i
 
     std::vector<GLfloat>* targetVerts = m_target->getVertices();
 
-    for(unsigned int i=_start; i<=_end; ++i)
+    for(GLuint i=_start; i<=_end; ++i)
     {
       three_i = 3 * m_targetSegmentVertIndices->at(i);
       _partition->average[0] += targetVerts->at(three_i);
@@ -72,7 +110,7 @@ SpherePartition* NRICP_Segment::createPartitions(unsigned int _start, unsigned i
       _partition->average[2] += targetVerts->at(three_i + 2);
     }
 
-     unsigned int noElem = _end - _start + 1;
+     GLuint noElem = _end - _start + 1;
 
     _partition->average[0] /= noElem;
     _partition->average[1] /= noElem;
@@ -118,8 +156,8 @@ void NRICP_Segment::addLandmarkCorrespondence()
 
  if(l1 >=0 && l2 >= 0)
  {
-   laux1 = findValue((unsigned int) l1, m_templateSegmentVertIndices);
-   laux2 = findValue((unsigned int) l2, m_targetSegmentVertIndices);
+   laux1 = findValue((GLuint) l1, m_templateSegmentVertIndices);
+   laux2 = findValue((GLuint) l2, m_targetSegmentVertIndices);
    if(laux1 > 0 && laux2 > 0)
      {
       m_templateSegmentLandmarks->push_back(laux1);
@@ -153,7 +191,7 @@ void NRICP_Segment::addLandmarkInformation()
    int four_l1, l1, l2;
    Vector3f l1_point, l2_point;
 
-   for(unsigned int i = 0; i < m_landmarkSegmentCorrespCount; ++i)
+   for(GLuint i = 0; i < m_landmarkSegmentCorrespCount; ++i)
    {
      l1 = m_templateSegmentLandmarks->at(i);
      l2 = m_targetSegmentLandmarks->at(i);
@@ -179,39 +217,6 @@ void NRICP_Segment::addLandmarkInformation()
 }
 
 
-void NRICP_Segment::initializeNRICP()
-{
-    m_templateSegmentFaces = m_template->getActiveSegment();
-    m_targetSegmentFaces = m_target->getActiveSegment();
-
-    buildVertexIndexArrays();
-    buildArcNodeMatrix();
-    buildVertexMatrix();
-    initializeWUXVectors();
-    buildLandmarkArrays();
-
-    m_stiffness = 20.0;
-    m_stiffnessChanged = true;
-    m_hasLandmark->resize(m_templateSegmentVertCount);
-    m_hasLandmark->setZero();
-
-    destroyPartitions(m_targetPartition);
-    m_targetPartition = createPartitions(0, m_targetSegmentVertCount-1, m_targetPartition);
-
-    //Sparse matrices A and B
-       m_templateSegmentEdgeCount = m_adjMat->size();
-
-    //Mighty matrices
-       unsigned int sizeRowsMG = 4 * m_templateSegmentEdgeCount;
-       unsigned int sizeColsA = 4 * m_templateSegmentVertCount;
-
-       m_A->resize(sizeRowsMG + m_templateSegmentVertCount, sizeColsA);
-       m_B->resize(sizeRowsMG + m_templateSegmentVertCount, 3);
-       m_A->reserve(2 * sizeRowsMG + sizeColsA);
-       m_B->reserve(3 * m_templateSegmentVertCount);
-}
-
-
 void NRICP_Segment::buildVertexIndexArrays()
 {
     //Template segment ===========================================
@@ -219,19 +224,21 @@ void NRICP_Segment::buildVertexIndexArrays()
     std::set<GLuint> targetSegmentVertIndices;
     std::set<GLuint>::iterator it1, it2;
 
-    unsigned int size = m_templateSegmentFaces->size();
-    for(unsigned int i=0; i<size; ++i)
+    GLuint size = m_templateSegmentFaces->size();
+    for(GLuint i=0; i<size; ++i)
     {        
         templateSegmentVertIndices.insert(m_templateSegmentFaces->at(i));
     }
 
     //Target segment ==============================================
     size = m_targetSegmentFaces->size();
-    for(unsigned int i=0; i<size; ++i)
+    for(GLuint i=0; i<size; ++i)
     {
         targetSegmentVertIndices.insert(m_targetSegmentFaces->at(i));
     }   
 
+    m_templateSegmentVertIndices->clear();
+    m_targetSegmentVertIndices->clear();
 
     for(it1 = templateSegmentVertIndices.begin(); it1 != templateSegmentVertIndices.end(); ++it1)
     {
@@ -252,17 +259,23 @@ void NRICP_Segment::buildArcNodeMatrix()
 {
   //Create the arc-node adjacency matrix
 
-    if(!m_adjMat)
+    if(m_adjMat)
     {
-     m_adjMat = new std::set < std::pair<unsigned int, unsigned int> >();
-     std::set < std::pair<unsigned int, unsigned int> >::iterator it;
-     unsigned int three_i;
-     unsigned int v1, v2, v3;
-     unsigned int min, max;
-     unsigned int faceCountTemplate = m_templateSegmentFaces->size()/3;
+     m_adjMat->clear();
+    }
+    else
+    {
+      m_adjMat = new std::set < std::pair<GLuint, GLuint> >();
+    }
+
+     std::set < std::pair<GLuint, GLuint> >::iterator it;
+     GLuint three_i;
+     GLuint v1, v2, v3;
+     GLuint min, max;
+     GLuint faceCountTemplate = m_templateSegmentFaces->size()/3;
 
      //Mesh vert indices turned into segment indices
-     for (unsigned int i = 0; i < faceCountTemplate ; ++i)
+     for (GLuint i = 0; i < faceCountTemplate ; ++i)
      {
         three_i = 3*i;
         v1 = findValue(m_templateSegmentFaces->at(three_i), m_templateSegmentVertIndices);
@@ -296,23 +309,28 @@ void NRICP_Segment::buildArcNodeMatrix()
             m_templateSegmentEdgeCount++;
         }
      }
-   }
-}
+ }
+
 
 
 void NRICP_Segment::buildVertexMatrix()
 {
-  if(!m_D)
+  if(m_D)
+  {
+    m_D->resize(m_templateSegmentVertCount, 4 * m_templateSegmentVertCount);
+    m_D->reserve(m_templateSegmentVertCount * 4);
+  }
+  else
   {
      m_D = new SparseMatrix<float>(m_templateSegmentVertCount , 4 * m_templateSegmentVertCount);
      m_D->reserve(m_templateSegmentVertCount * 4);
   }
 
-  unsigned int three_i = 0;
-  unsigned int four_i = 0;
+  GLuint three_i = 0;
+  GLuint four_i = 0;
   std::vector<GLfloat>* templateVerts = m_template->getVertices();
 
-  for(unsigned int i = 0; i < m_templateSegmentVertCount; ++i)
+  for(GLuint i = 0; i < m_templateSegmentVertCount; ++i)
   {
    three_i = 3 * m_templateSegmentVertIndices->at(i);
    four_i = 4 * i;
@@ -378,7 +396,7 @@ void NRICP_Segment::buildLandmarkArrays()
 //Nonrigid transformations
 void NRICP_Segment::calculateNonRigidTransformation()
 {
-  float previous_seconds = glfwGetTime();
+  GLfloat previous_seconds = glfwGetTime();
 
    MatrixXf* X_prev = new MatrixXf(4 * m_templateSegmentVertCount, 3);
    X_prev->setZero(4 * m_templateSegmentVertCount, 3);
@@ -388,7 +406,7 @@ void NRICP_Segment::calculateNonRigidTransformation()
    findCorrespondences();
    determineNonRigidOptimalDeformation();
    deformTemplate();
-   float changes = normedDifference(X_prev, m_X);
+   GLfloat changes = normedDifference(X_prev, m_X);
 
    while (changes > m_epsilon)
    {
@@ -401,8 +419,8 @@ void NRICP_Segment::calculateNonRigidTransformation()
 
    delete X_prev;
 
-   float current_seconds = glfwGetTime();
-   float elapsed_seconds = current_seconds - previous_seconds;
+   GLfloat current_seconds = glfwGetTime();
+   GLfloat elapsed_seconds = current_seconds - previous_seconds;
    printf(" Deformation takes %.2f seconds \n ", elapsed_seconds);
 }
 
@@ -410,14 +428,14 @@ void NRICP_Segment::calculateNonRigidTransformation()
 void NRICP_Segment::findCorrespondences()
 {
       Vector3f templateVertex;
-      float distance_left = 0.0;
-      float distance_right = 0.0;
+      GLfloat distance_left = 0.0;
+      GLfloat distance_right = 0.0;
       m_W->setOnes();
 
-      unsigned int three_i;
+      GLuint three_i;
       std::vector<GLfloat>* templateVerts = m_template->getVertices();
 
-      for (unsigned int i=0; i<m_templateSegmentVertCount; ++i)
+      for (GLuint i=0; i<m_templateSegmentVertCount; ++i)
       {
           if(!(*m_hasLandmark)(i))
           {
@@ -477,14 +495,14 @@ void NRICP_Segment::findCorrespondences()
         }
 
        //Distance plane weight
-          if((*m_W)(i) > 0.0)
-          {
-            (*m_W)(i) = calculateSegmentPlaneProximity(i);
-          }
+       //   if((*m_W)(i) > 0.0)
+      //    {
+      //      (*m_W)(i) = calculateSegmentPlaneProximity(i);
+       //   }
     }
 }
 
-void NRICP_Segment::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
+void NRICP_Segment::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd)
  {
       //Find closest points between template and target mesh
       //Store in U
@@ -492,16 +510,16 @@ void NRICP_Segment::findCorrespondences_Naive(unsigned int _templateIndex, unsig
 
       Vector3f templateVertex;
       Vector3f targetVertex;
-      float distance = 0.0;
-      float minDistance = 1000.0;
+      GLfloat distance = 0.0;
+      GLfloat minDistance = 1000.0;
       bool foundCorrespondence = false;
       Vector3f auxUj(0.0, 0.0, 0.0);
-      unsigned int three_j;
+      GLuint three_j;
 
       templateVertex = m_template->getVertex(m_templateSegmentVertIndices->at(_templateIndex));
       std::vector<GLfloat>* targetVerts = m_target->getVertices();
 
-      for(unsigned int j=_targetStart; j<=_targetEnd; ++j)
+      for(GLuint j=_targetStart; j<=_targetEnd; ++j)
       {
        three_j = 3 * m_targetSegmentVertIndices->at(j);
        targetVertex[0] =  targetVerts->at(three_j);
@@ -545,21 +563,21 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
   {
     //Find X = (At*A)-1 * At * B
     //For current stiffness
-    unsigned int i;
-    unsigned int four_i;
-    unsigned int v1;
-    unsigned int v2;
-    unsigned int four_v1;
-    unsigned int four_v2;
-    unsigned int auxRowIndex;
-    unsigned int sizeRowsMG = 4 * m_templateSegmentEdgeCount;
-    float weight;
+    GLuint i;
+    GLuint four_i;
+    GLuint v1;
+    GLuint v2;
+    GLuint four_v1;
+    GLuint four_v2;
+    GLuint auxRowIndex;
+    GLuint sizeRowsMG = 4 * m_templateSegmentEdgeCount;
+    GLfloat weight;
 
  //Alpha * M * G
    if(m_stiffnessChanged)
    {
     i = 0;
-    for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+    for(std::set< std::pair<GLuint, GLuint> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
       four_i = 4 * i; //for all edges
       v1 = it->first;
@@ -580,7 +598,7 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
    }
 
  //W * D
-    for(unsigned int i = 0; i < m_templateSegmentVertCount; ++i)
+    for(GLuint i = 0; i < m_templateSegmentVertCount; ++i)
     {
      auxRowIndex = i + sizeRowsMG;
      four_i = 4 * i;
@@ -623,7 +641,7 @@ void NRICP_Segment::deformTemplate()
     //Changes to verts in segment must be attributed to the appropiate verts in the mesh
     //TO DO: Distance to segmentation plane should also be taken into consideration
 
-      unsigned int three_i, four_i;
+      GLuint three_i, four_i;
       MatrixXf auxMultiplication(m_templateSegmentVertCount, 3);
       auxMultiplication = (*m_D) * (*m_X);
       std::vector<GLfloat>* templateVerts = m_template->getVertices();
@@ -631,7 +649,7 @@ void NRICP_Segment::deformTemplate()
       //Change point values in m_D, which will change them in the mesh
       //Change points in the mesh
 
-      for(unsigned int i = 0; i < m_templateSegmentVertCount; ++i)
+      for(GLuint i = 0; i < m_templateSegmentVertCount; ++i)
       {
         three_i = 3 * m_templateSegmentVertIndices->at(i);
         four_i = 4 * i;
@@ -652,15 +670,15 @@ void NRICP_Segment::deformTemplate()
 //Auxiliaries ---------------------------------------------------------------------------
 
 
-float NRICP_Segment::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
+GLfloat NRICP_Segment::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
   {
-    float norm = 0.0;
-    float diff = 0.0;
-    unsigned int floatCount = 4 * m_templateSegmentVertCount;
+    GLfloat norm = 0.0;
+    GLfloat diff = 0.0;
+    GLuint floatCount = 4 * m_templateSegmentVertCount;
 
-    for(unsigned int i=0; i < floatCount; ++i)
+    for(GLuint i=0; i < floatCount; ++i)
     {
-        for(unsigned int j=0; j<3; ++j)
+        for(GLuint j=0; j<3; ++j)
         {
             diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
             norm += diff*diff;
@@ -669,19 +687,19 @@ float NRICP_Segment::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
     return sqrt(norm);
   }
 
-float NRICP_Segment::euclideanDistance(Vector3f _v1, Vector3f _v2)
+GLfloat NRICP_Segment::euclideanDistance(Vector3f _v1, Vector3f _v2)
   {
-      float diff1 = _v1[0] - _v2[0];
-      float diff2 = _v1[1] - _v2[1];
-      float diff3 = _v1[2] - _v2[2];
+      GLfloat diff1 = _v1[0] - _v2[0];
+      GLfloat diff2 = _v1[1] - _v2[1];
+      GLfloat diff3 = _v1[2] - _v2[2];
 
       return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
   }
 
-int NRICP_Segment::findValue(unsigned int _value, std::vector<GLuint>* _vector)
+int NRICP_Segment::findValue(GLuint _value, std::vector<GLuint>* _vector)
 {
-    unsigned int size = _vector->size();
-    unsigned int i = 0;
+    GLuint size = _vector->size();
+    GLuint i = 0;
     bool found = false;
     int result = -1;
 
@@ -699,25 +717,28 @@ int NRICP_Segment::findValue(unsigned int _value, std::vector<GLuint>* _vector)
     return result;
 }
 
-float NRICP_Segment::calculateSegmentPlaneProximity(int _i)
+GLfloat NRICP_Segment::calculateSegmentPlaneProximity(int _i)
 {
   Vector3f templateIndex = m_template->getVertex(m_templateSegmentVertIndices->at(_i));
   Vector3i segmentationPlane = m_template->getActivePlane();
   Vector3f planeCenter = m_template->calculateCentre(segmentationPlane[0], segmentationPlane[1], segmentationPlane[2]);
-  float distance = euclideanDistance(templateIndex, planeCenter);
-  float proximityRatio = sin(distance);
+  GLfloat distance = euclideanDistance(templateIndex, planeCenter);
+  GLfloat proximityRatio = sin(distance);
+
+  printf("Distance from active plane %.2f \n", distance);
+  printf("Proximity %.2f \n", proximityRatio);
 
   return proximityRatio;
 }
 
-float NRICP_Segment::maxDistanceFromPoint(Vector3f _point)
+GLfloat NRICP_Segment::maxDistanceFromPoint(Vector3f _point)
 {
-  float maxDistance = -1;
+  GLfloat maxDistance = -1;
 
-  for(unsigned int i = 0; i < m_templateSegmentVertCount; ++i)
+  for(GLuint i = 0; i < m_templateSegmentVertCount; ++i)
   {
       Vector3f vert = m_template->getVertex(m_templateSegmentVertIndices->at(i));
-      float distance = euclideanDistance(vert, _point);
+      GLfloat distance = euclideanDistance(vert, _point);
 
       if(distance > maxDistance)
       {

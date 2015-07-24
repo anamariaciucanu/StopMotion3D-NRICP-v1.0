@@ -13,32 +13,33 @@ class NRICP_Segment
 private:
    Mesh* m_template;
    Mesh* m_target;
-   unsigned int m_templateSegmentVertCount;
-   unsigned int m_templateSegmentEdgeCount;
-   unsigned int m_targetSegmentVertCount;
-   unsigned int m_landmarkSegmentCorrespCount;
+   GLuint m_templateSegmentVertCount;
+   GLuint m_templateSegmentEdgeCount;
+   GLuint m_targetSegmentVertCount;
+   GLuint m_landmarkSegmentCorrespCount;
+   GLfloat m_stiffness;
+   GLfloat m_beta;
+   GLfloat m_epsilon;
+   GLfloat m_gamma;
+   bool m_stiffnessChanged;
+   bool m_landmarksChanged;
+
    std::vector<GLuint>* m_templateSegmentFaces;
    std::vector<GLuint>* m_targetSegmentFaces;
    std::vector<GLuint>* m_templateSegmentVertIndices;
    std::vector<GLuint>* m_targetSegmentVertIndices;
-   std::set < std::pair<unsigned int, unsigned int> >* m_adjMat;
-   float m_stiffness;
-   float m_beta;
-   float m_epsilon;
-   float m_gamma;
-   bool m_stiffnessChanged;
-   bool m_landmarksChanged;
+   std::vector<GLuint>* m_templateSegmentLandmarks;
+   std::vector<GLuint>* m_targetSegmentLandmarks;
+   std::set < std::pair<GLuint, GLuint> >* m_adjMat;
 
+   SpherePartition* m_targetPartition;
    VectorXi* m_hasLandmark;
    VectorXf* m_W;
-   SparseMatrix<GLfloat>* m_D;
    MatrixXf* m_U;
    MatrixXf* m_X;
-   SpherePartition* m_targetPartition;
+   SparseMatrix<GLfloat>* m_D;
    SparseMatrix<GLfloat, ColMajor>* m_A;
    SparseMatrix<GLfloat, ColMajor>* m_B;
-   std::vector<unsigned int>* m_templateSegmentLandmarks;
-   std::vector<unsigned int>* m_targetSegmentLandmarks;
 
 
 public:
@@ -46,7 +47,7 @@ public:
    ~NRICP_Segment();
    void initializeNRICP();
 
-   SpherePartition* createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition);
+   SpherePartition* createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition);
    void destroyPartitions(SpherePartition *_partition);
 
    void buildVertexIndexArrays();
@@ -56,13 +57,13 @@ public:
    void buildLandmarkArrays();
    void addLandmarkInformation();
    void calculateNonRigidTransformation();
-   void findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
+   void findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd);
    void findCorrespondences();
    void determineNonRigidOptimalDeformation();
    void solveLinearSystem();
    void deformTemplate();
-   float euclideanDistance(Vector3f _v1, Vector3f _v2);
-   float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);   
+  GLfloat euclideanDistance(Vector3f _v1, Vector3f _v2);
+  GLfloat normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
 
    void modifyStiffness(float _value)
    {
@@ -83,14 +84,14 @@ public:
    }
    void addLandmarkCorrespondence();
    void clearLandmarkCorrespondences();
-   int findValue(unsigned int _value, std::vector<GLuint>* _vector);
-   float calculateSegmentPlaneProximity(int _i);
-   float maxDistanceFromPoint(Vector3f _point);
+   int findValue(GLuint _value, std::vector<GLuint>* _vector);
+  GLfloat calculateSegmentPlaneProximity(int _i);
+  GLfloat maxDistanceFromPoint(Vector3f _point);
 
 
    /// Setters and Getters for the private members
 
-   float getStiffness()
+  GLfloat getStiffness()
    {
        return m_stiffness;
    }

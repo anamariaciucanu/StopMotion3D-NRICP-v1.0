@@ -89,10 +89,10 @@ Mesh::~Mesh()
  destroySegments(m_segmentationRoot);
 }
 
-void Mesh::setVertex(unsigned int _vertNo, Vector3f _value)
+void Mesh::setVertex(GLuint _vertNo, Vector3f _value)
 {
-    unsigned int three_i = 3 * _vertNo;
-    unsigned int four_i = 4 * _vertNo;
+    GLuint three_i = 3 * _vertNo;
+    GLuint four_i = 4 * _vertNo;
     m_vertices->at(three_i) = _value[0];
     m_vertices->at(three_i + 1) = _value[1];
     m_vertices->at(three_i + 2) = _value[2];
@@ -208,9 +208,9 @@ bool Mesh::loadMesh(const char *_fileName)
      }    
 
     m_position = m_position/m_vertCount;
-    unsigned int three_i;
+    GLuint three_i;
 
-    for(unsigned int i = 0; i < m_vertCount; i++)
+    for(GLuint i = 0; i < m_vertCount; i++)
     {
       three_i = 3*i;
       m_vertices->at(three_i) = m_vertices->at(three_i) - m_position[0];
@@ -225,9 +225,9 @@ void Mesh::printLandmarkedPoints(const char*_fileName)
 {
   ofstream file;
   file.open(_fileName);
-  unsigned int size = m_landmarkVertexIndices->size();
+  GLuint size = m_landmarkVertexIndices->size();
 
-  for(unsigned int i=0; i<size; ++i)
+  for(GLuint i=0; i<size; ++i)
   {
    file << m_landmarkVertexIndices->at(i);
    file << "\n";
@@ -241,28 +241,28 @@ void Mesh::calculateNormals()
 {
   if(m_normals->size()<1)
   {
-      for(unsigned int k=0; k<m_vertices->size(); ++k)
+      for(GLuint k=0; k<m_vertices->size(); ++k)
       {
        m_normals->push_back(0.0);
       }
   }
   else
   {
-    for(unsigned int k=0; k<m_normals->size(); ++k)
+    for(GLuint k=0; k<m_normals->size(); ++k)
     {
      m_normals->at(k) = 0.0;
     }
   }
 
-  unsigned int three_i;
+  GLuint three_i;
   unsigned short v1;
   unsigned short v2;
   unsigned short v3;
-  unsigned int three_v1;
-  unsigned int three_v2;
-  unsigned int three_v3;
+  GLuint three_v1;
+  GLuint three_v2;
+  GLuint three_v3;
 
-  for (unsigned int i = 0; i < m_faceCount; ++i)
+  for (GLuint i = 0; i < m_faceCount; ++i)
   {
    three_i = 3 * i;
    v1 = m_faceIndices->at(three_i);
@@ -299,14 +299,14 @@ void Mesh::calculateNormals()
 
 void Mesh::normaliseNormals()
 {
-    unsigned int three_i;
-    for(unsigned int i = 0; i < m_vertCount; i++)
+    GLuint three_i;
+    for(GLuint i = 0; i < m_vertCount; i++)
     {
-        float magnitude = 0.0;
+        GLfloat magnitude = 0.0;
         three_i = 3 * i;
-        float x = m_normals->at(three_i);
-        float y = m_normals->at(three_i + 1);
-        float z = m_normals->at(three_i + 2);
+        GLfloat x = m_normals->at(three_i);
+        GLfloat y = m_normals->at(three_i + 1);
+        GLfloat z = m_normals->at(three_i + 2);
         magnitude = sqrt(x * x + y * y + z * z);
 
         if(abs(magnitude) > 1.0)
@@ -322,24 +322,24 @@ void Mesh::buildVertexNormalVector()
  {
      if(m_vertNormalLines->size()<1)
      {
-         for(unsigned int k=0; k < m_vertCount * 6; ++k)
+         for(GLuint k=0; k < m_vertCount * 6; ++k)
          {
            m_vertNormalLines->push_back(0.0);
          }
      }
      else
      {
-       for(unsigned int k=0; k<m_vertNormalLines->size(); ++k)
+       for(GLuint k=0; k<m_vertNormalLines->size(); ++k)
        {
          m_vertNormalLines->at(k) = 0.0;
        }
      }
 
-     unsigned int three_i;
-     float alpha = 1.01;
-     float beta = 0.5;
+     GLuint three_i;
+     GLfloat alpha = 1.01;
+     GLfloat beta = 0.5;
 
-     for (unsigned int i=0; i < m_vertCount; ++i)
+     for (GLuint i=0; i < m_vertCount; ++i)
      {
          three_i = 3*i;
          m_vertNormalLines->at(three_i) = alpha * m_vertices->at(three_i);
@@ -354,16 +354,16 @@ void Mesh::buildVertexNormalVector()
 void Mesh::normaliseMesh()
 {
  //Find min and max for x, y, z
- float min_x = 1000.0;
- float min_y = 1000.0;
- float min_z = 1000.0;
- float max_x = -1000.0;
- float max_y = -1000.0;
- float max_z = -1000.0;
- float aux;
- unsigned int three_i;
+ GLfloat min_x = 1000.0;
+ GLfloat min_y = 1000.0;
+ GLfloat min_z = 1000.0;
+ GLfloat max_x = -1000.0;
+ GLfloat max_y = -1000.0;
+ GLfloat max_z = -1000.0;
+ GLfloat aux;
+ GLuint three_i;
 
- for (unsigned int i = 0; i < m_vertCount; ++i)
+ for (GLuint i = 0; i < m_vertCount; ++i)
   {
         three_i = 3*i;
 
@@ -380,12 +380,12 @@ void Mesh::normaliseMesh()
         else if (aux > max_z) { max_z = aux;}
     }
 
-    for (unsigned int i = 0; i < m_vertCount; ++i)
+    for (GLuint i = 0; i < m_vertCount; ++i)
     {
         three_i = 3*i;
-        float x  = m_vertices->at(three_i);
-        float y = m_vertices->at(three_i + 1);
-        float z = m_vertices->at(three_i + 2) ;
+        GLfloat x  = m_vertices->at(three_i);
+        GLfloat y = m_vertices->at(three_i + 1);
+        GLfloat z = m_vertices->at(three_i + 2) ;
 
         m_vertices->at(three_i) = 2.0 * (x - min_x) / (max_x - min_x) - 1.0;
         m_vertices->at(three_i + 1) = 2.0 * (y - min_y) / (max_y - min_y) - 1.0;
@@ -465,16 +465,16 @@ void Mesh::buildArcNodeMatrix()
 
     if(!m_adjMat)
     {
-     m_adjMat = new std::set < std::pair<unsigned int, unsigned int> >();
-     std::set < std::pair<unsigned int, unsigned int> >::iterator it;
-     unsigned int three_i;
-     unsigned int v1;
-     unsigned int v2;
-     unsigned int v3;
-     unsigned int min;
-     unsigned int max;
+     m_adjMat = new std::set < std::pair<GLuint, GLuint> >();
+     std::set < std::pair<GLuint, GLuint> >::iterator it;
+     GLuint three_i;
+     GLuint v1;
+     GLuint v2;
+     GLuint v3;
+     GLuint min;
+     GLuint max;
 
-     for (unsigned int i = 0; i < m_faceCount; ++i)
+     for (GLuint i = 0; i < m_faceCount; ++i)
      {
         three_i = 3*i;
         v1 = m_faceIndices->at(three_i);
@@ -519,10 +519,10 @@ void Mesh::buildVertexMatrix()
      m_D->reserve(m_vertCount * 4);
   }
 
-  unsigned int three_i = 0;
-  unsigned int four_i = 0;
+  GLuint three_i = 0;
+  GLuint four_i = 0;
 
-  for(unsigned int i = 0; i < m_vertCount; i++)
+  for(GLuint i = 0; i < m_vertCount; i++)
   {
    three_i = 3 * i;
    four_i = 4 * i;
@@ -548,7 +548,7 @@ void Mesh::buildNeighbourList()
   m_neighbours = new std::vector<std::vector<int> >(m_vertCount);
 
 
-  for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+  for(std::set< std::pair<GLuint, GLuint> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
   {
       v1 = it->first;
       v2 = it->second;
@@ -564,7 +564,7 @@ void Mesh::buildNeighbourList()
  }
 }
 
-Vector3f Mesh::getNormal(unsigned int _vertNo)
+Vector3f Mesh::getNormal(GLuint _vertNo)
 {
     Vector3f normal(0.0, 0.0, 0.0);
 
@@ -577,7 +577,7 @@ Vector3f Mesh::getNormal(unsigned int _vertNo)
     return normal;
 }
 
-Vector3f Mesh::getVertex(unsigned int _vertNo)
+Vector3f Mesh::getVertex(GLuint _vertNo)
 {
     Vector3f vert(0.0, 0.0, 0.0);
 
@@ -593,10 +593,10 @@ Vector3f Mesh::getVertex(unsigned int _vertNo)
 bool Mesh::findInListOfNeighbours(int _neighbour1, int _neighbour2)
 {
   std::vector<int> neighbours = m_neighbours->at(_neighbour1);
-  unsigned int size = neighbours.size();
+  GLuint size = neighbours.size();
   bool found = false;
 
-  for(unsigned int i=0; i<size && !found; ++i)
+  for(GLuint i=0; i<size && !found; ++i)
   {
       if(neighbours.at(i) == _neighbour2)
       {
@@ -612,7 +612,7 @@ float Mesh::calculateVertexCurvature(int _index)
 
     float curvature = -10000;
     std::vector<int> neighbours = m_neighbours->at(_index);
-    unsigned int noNeighbours = neighbours.size();
+    GLuint noNeighbours = neighbours.size();
     std::vector<int> edges;
     int neighbour1;
     int neighbour2;
@@ -622,9 +622,9 @@ float Mesh::calculateVertexCurvature(int _index)
     float dirac = 0.0;
 
     //Create triangle list
-    for(unsigned int i = 0; i < noNeighbours - 1; ++i)
+    for(GLuint i = 0; i < noNeighbours - 1; ++i)
     {
-      for(unsigned int j = i+1; j < noNeighbours; ++j)
+      for(GLuint j = i+1; j < noNeighbours; ++j)
       {
         neighbour1 = neighbours.at(i);
         neighbour2 = neighbours.at(j);
@@ -641,7 +641,7 @@ float Mesh::calculateVertexCurvature(int _index)
       //we know the 3 indices of the traingle
       //calculate index angle and triangle area
       Vector3f v1 = getVertex(_index);
-      unsigned int i = 0;
+      GLuint i = 0;
 
       while(i < edges.size())
        {
@@ -676,8 +676,8 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
     Vector3f P, Q, T;
     float det, inv_det, u, v;
     float t = 0.0f;
-    unsigned int i = 0;
-    unsigned int three_i;
+    GLuint i = 0;
+    GLuint three_i;
     int v1, v2, v3;
 
 
@@ -803,10 +803,10 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
 
 void Mesh::affineTransformation(MatrixXf _X)
 {
-    unsigned int three_i;
+    GLuint three_i;
     Vector3f vertex;
 
-    for(unsigned int i=0; i < m_vertCount; ++i)
+    for(GLuint i=0; i < m_vertCount; ++i)
     {
         three_i = 3*i;
         vertex[0] = m_vertices->at(three_i);
@@ -840,7 +840,7 @@ void Mesh::moveObject(float _tX, float _tY, float _tZ)
   vec4 vertex;
   vertex.v[3] = 1.0;
 
-  for(unsigned int i=0; i<m_vertCount; ++i)
+  for(GLuint i=0; i<m_vertCount; ++i)
   {
      three_i = 3*i;
      vertex.v[0] = m_vertices->at(three_i);
@@ -869,7 +869,7 @@ void Mesh::moveToCentre()
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
 {
-  unsigned int three_i;
+  GLuint three_i;
   mat4 Rx = rotate_x_deg(identity_mat4(), _angleX);
   mat4 Ry= rotate_y_deg(identity_mat4(), _angleY);
   mat4 Rz = rotate_z_deg(identity_mat4(), _angleZ);
@@ -877,7 +877,7 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
   vec4 vertex;
   vertex.v[3] = 1.0;
 
-  for(unsigned int i=0; i<m_vertCount; ++i)
+  for(GLuint i=0; i<m_vertCount; ++i)
   {
      three_i = 3*i;
      vertex.v[0] = m_vertices->at(three_i);
@@ -896,10 +896,10 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
 
 void Mesh::rotateObject(Matrix3f _R)
 {
-    unsigned int three_i;
+    GLuint three_i;
     Vector3f vertex;
 
-    for(unsigned int i=0; i<m_vertCount; ++i)
+    for(GLuint i=0; i<m_vertCount; ++i)
     {
        three_i = 3*i;
        vertex[0] = m_vertices->at(three_i);
@@ -958,9 +958,9 @@ void Mesh::rotateByEigenVectors()
       Matrix3f B;
       B.setZero();
 
-      for(unsigned int k=0; k<3; ++k)
+      for(GLuint k=0; k<3; ++k)
       {
-        for(unsigned int l=0; l<3; ++l)
+        for(GLuint l=0; l<3; ++l)
         {
             if(abs(A(k,l)) > 0.8)
             {
@@ -974,7 +974,7 @@ void Mesh::rotateByEigenVectors()
       Vector3f vertex;
       int three_i;
 
-      for(unsigned int i=0; i<m_vertCount; ++i)
+      for(GLuint i=0; i<m_vertCount; ++i)
       {
         three_i = 3*i;
 
@@ -1002,20 +1002,20 @@ void Mesh::calculateEigenvectors()
 {
     Matrix3f covarianceMatrix;
     covarianceMatrix.setZero();
-    unsigned int three_i;
+    GLuint three_i;
     Vector3f v;
 
     //Covariance Matrix
-    for(unsigned int i=0; i<m_vertCount; ++i)
+    for(GLuint i=0; i<m_vertCount; ++i)
     {
        three_i = 3*i;
        v[0] = m_vertices->at(three_i) - m_position[0];
        v[1] = m_vertices->at(three_i+1) - m_position[1];
        v[2] = m_vertices->at(three_i+2) - m_position[2];
 
-       for(unsigned int j=0; j<3; ++j)
+       for(GLuint j=0; j<3; ++j)
        {
-         for(unsigned int k=0; k<3; ++k)
+         for(GLuint k=0; k<3; ++k)
          {
            covarianceMatrix(j, k) = covarianceMatrix(j, k) + v[j]*v[k];
          }
@@ -1033,12 +1033,12 @@ void Mesh::calculateEigenvectors()
 
 void Mesh::calculatePosition()
 {
-    unsigned int three_i;
+    GLuint three_i;
     m_position[0] = 0.0;
     m_position[1] = 0.0;
     m_position[2] = 0.0;
 
-    for(unsigned int i=0; i<m_vertCount; ++i)
+    for(GLuint i=0; i<m_vertCount; ++i)
     {
         three_i = 3*i;
 
@@ -1055,7 +1055,7 @@ void Mesh::calculatePosition()
 
 void Mesh::segmentMesh()
 {
-    unsigned int size = m_landmarkVertexIndices->size();
+    GLuint size = m_landmarkVertexIndices->size();
 
     if(size >= 3)
     {
@@ -1065,14 +1065,14 @@ void Mesh::segmentMesh()
         Vector3f point2;
         Vector3f point3;
 
-        for(unsigned int i=0; i<3; ++i)
+        for(GLuint i=0; i<3; ++i)
         {
           plane[i] = m_landmarkVertexIndices->at(size-1);
           m_landmarkVertexIndices->pop_back();
           size--;
         }
 
-        for(unsigned int i=0; i<3; ++i)
+        for(GLuint i=0; i<3; ++i)
         {
           point1[i] = m_vertices->at(3*plane[0] + i);
           point2[i] = m_vertices->at(3*plane[1] + i);
@@ -1096,14 +1096,14 @@ void Mesh::segmentMesh()
 
 void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>* _parentSideFaces, Vector3f _planeCentre, Vector3f _planeNormal)
 {
-    unsigned int size = _parentSideFaces->size();
-    unsigned int three_i;
+    GLuint size = _parentSideFaces->size();
+    GLuint three_i;
     float dot_directions;
     Vector3f faceCentre;
     Vector3i face;
     Vector3f planeFaceDirection;
 
-    for(unsigned int i=0; i<size/3; ++i)
+    for(GLuint i=0; i<size/3; ++i)
     {
      three_i = 3*i;
      face[0] = _parentSideFaces->at(three_i);
@@ -1207,10 +1207,10 @@ void Mesh::createSegmentList()
       }
   }
 
-  for(unsigned int i=0; i<m_segments.size(); ++i)
+  for(GLuint i=0; i<m_segments.size(); ++i)
   {
       std::vector<GLuint>* segment = m_segments[i];
-      for(unsigned int j=0; j<segment->size(); ++j)
+      for(GLuint j=0; j<segment->size(); ++j)
       {
         m_segmentsIndices->push_back(segment->at(j));
       }
@@ -1252,7 +1252,7 @@ Vector3f Mesh::calculateCentre(int _p1, int _p2, int _p3)
    Vector3f point2;
    Vector3f point3;
 
-   for(unsigned int i=0; i<3; ++i)
+   for(GLuint i=0; i<3; ++i)
    {
        point1[i] = m_vertices->at(3*_p1 + i);
        point2[i] = m_vertices->at(3*_p2 + i);

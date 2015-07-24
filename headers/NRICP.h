@@ -24,28 +24,28 @@
 class NRICP
 {
  private:
- ///@brief Unsigned integer -> the number of vertices in the template
-    unsigned int m_templateVertCount;
+ ///@brief GLuinteger -> the number of vertices in the template
+    GLuint m_templateVertCount;
  ///@brief Unsigned integer -> the number of edges in the template
-    unsigned int m_templateEdgeCount;
+    GLuint m_templateEdgeCount;
  ///@brief Unsigned integer -> the number of vertices in the target
-    unsigned int m_targetVertCount;
+    GLuint m_targetVertCount;
  ///@brief Unsigned integer -> the number of landmark corresponences
-    unsigned int m_landmarkCorrespondenceCount;
+    GLuint m_landmarkCorrespondenceCount;
  ///@brief Pointer to Mesh class object -> template mesh
     Mesh* m_template;
  ///@brief Pointer to Mesh class object -> target mesh
     Mesh* m_target;
  ///@brief Float for stiffness of the NRICP algorithm
-    float m_stiffness;
+    GLfloat m_stiffness;
  ///@brief Float for beta, the influence of the landmarks from the NRICP algorithm
-    float m_beta;
+    GLfloat m_beta;
  ///@brief Float for epsilon, the threshold of accepted change between any two consecutive transformations
-    float m_epsilon;
+    GLfloat m_epsilon;
  ///@brief Float gor gamma, the skew influence
-    float m_gamma;
+    GLfloat m_gamma;
  ///@brief Pointer to set of pairs -> the edge list
-    std::set < std::pair<unsigned int, unsigned int> >* m_adjMat;
+    std::set < std::pair<GLuint, GLuint> >* m_adjMat;
  ///@brief Boolean value that says whether the stiffness has changed
     bool m_stiffnessChanged;
  ///@brief Landmarks number has changed
@@ -83,7 +83,7 @@ class NRICP
     ///@param [in] _start, _end Unsigned integers -> the start and end indices of a partition
     ///@param [in] _partition -> the parent partition for the new hierarchy member to be created
     ///@param [out] Pointer to Sphere Partition hierarchy memebr created
-    SpherePartition* createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition);
+    SpherePartition* createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition);
     ///@brief destroys the sphere hierarchy tree
     ///@param [in] Pointer to sphere partition -> the root of the hierarchy
     void destroyPartitions(SpherePartition *_partition);
@@ -96,7 +96,7 @@ class NRICP
     ///@brief finds the closest target vertex to the template vertex, from a restrained group of target vertices
     ///@param [in] _templateIndex Unsigned integer -> the index of the template vertex
     ///@param [in] _targetStart, _targetEnd Unsigned integers -> the start and end vertex indices on the target mesh
-    void findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd);
+    void findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd);
     ///@brief Fills in m_U with target correspondences for every template vertex
     void findCorrespondences();
     ///@brief Finds m_X transformation matrix for the template mesh for NRICP
@@ -113,7 +113,7 @@ class NRICP
     void addLandmarkInformation();
     ///@brief Modifies stiffness by a certain value
     ///@param [in] _value Float variable by which the stiffness is modified
-    void modifyStiffness(float _value)
+    void modifyStiffness(GLfloat _value)
     {
       m_stiffness += _value;
       if(m_stiffness < 1.0)
@@ -124,7 +124,7 @@ class NRICP
     }
     ///@brief Modifies beta by a certain value
     ///@param [in] _value Float variable by which beta is modified
-    void modifyBeta(float _value)
+    void modifyBeta(GLfloat _value)
     {
       m_beta += _value;
       if(m_beta < 0.0)
@@ -135,14 +135,14 @@ class NRICP
     ///@brief Calculates the euclidean distance between two vertices
     ///@param [in] _v1, _v2 Vectors of size 3, representing the positions of vertices _v1 and _v2 respectively
     ///@param [out] Float variable -> the euclidean distance between the two vertices
-    float euclideanDistance(Vector3f _v1, Vector3f _v2);
+    GLfloat euclideanDistance(Vector3f _v1, Vector3f _v2);
     ///@brief Calculates the Frobenius norm of the difference between 2 matrices
     ///@param [in] _Xj_1, _Xj Dynamic matrices of floats -> transformation matricesfrom 2 consecutive iterations
     ///@param [out] Float variable representing the norm
-    float normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
+    GLfloat normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj);
 
     /// Setters and Getters for the private members
-    float getStiffness() { return m_stiffness; }
+    GLfloat getStiffness() { return m_stiffness; }
     void setTemplate(Mesh* _template){ m_template = _template; }
     Mesh* getTemplate(){ return m_template; }
     void setTarget(Mesh* _target){ m_target = _target; }

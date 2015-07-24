@@ -70,8 +70,8 @@ void NRICP::initializeNRICP()
        m_templateEdgeCount = m_template->getEdgeCount();
 
     //Mighty matrices
-       unsigned int sizeRowsMG = 4 * m_templateEdgeCount;
-       unsigned int sizeColsA = 4 * m_templateVertCount;
+       GLuint sizeRowsMG = 4 * m_templateEdgeCount;
+       GLuint sizeColsA = 4 * m_templateVertCount;
 
        m_A->resize(sizeRowsMG + m_templateVertCount, sizeColsA);
        m_B->resize(sizeRowsMG + m_templateVertCount, 3);
@@ -92,9 +92,9 @@ NRICP::~NRICP()
     destroyPartitions(m_targetPartition);
 }
 
-SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end, SpherePartition* _partition)
+SpherePartition* NRICP::createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition)
 {
-    unsigned int three_i;
+    GLuint three_i;
 
     //Observation: This assumes vertex data is in order
     _partition = new SpherePartition();
@@ -107,7 +107,7 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
     std::vector<GLfloat>* targetVertices = m_target->getVertices();
 
 
-    for(unsigned int i=_start; i<=_end; ++i)
+    for(GLuint i=_start; i<=_end; ++i)
     {
       three_i = 3*i;
       _partition->average[0] += targetVertices->at(three_i);
@@ -115,7 +115,7 @@ SpherePartition* NRICP::createPartitions(unsigned int _start, unsigned int _end,
       _partition->average[2] += targetVertices->at(three_i + 2);
     }
 
-     unsigned int noElem = _end - _start + 1;
+     GLuint noElem = _end - _start + 1;
 
     _partition->average[0] /= noElem;
     _partition->average[1] /= noElem;
@@ -188,7 +188,7 @@ void NRICP::addLandmarkInformation()
    int four_l1, l1, l2;
    Vector3f l1_point, l2_point;
 
-   for(unsigned int i = 0; i < m_landmarkCorrespondenceCount; ++i)
+   for(GLuint i = 0; i < m_landmarkCorrespondenceCount; ++i)
    {
      l1 = landmarksTemplate->at(i);
      l2 = landmarksTarget->at(i);
@@ -230,7 +230,7 @@ void NRICP::calculateRigidTransformation()
 
 void NRICP::calculateNonRigidTransformation()
 {
-   float previous_seconds = glfwGetTime();
+   GLfloat previous_seconds = glfwGetTime();
 
    MatrixXf* X_prev = new MatrixXf(4 * m_templateVertCount, 3);
    X_prev->setZero(4 * m_templateVertCount, 3);
@@ -240,7 +240,7 @@ void NRICP::calculateNonRigidTransformation()
    findCorrespondences();
    determineNonRigidOptimalDeformation();
    deformTemplate();
-   float changes = normedDifference(X_prev, m_X);
+   GLfloat changes = normedDifference(X_prev, m_X);
 
    while (changes > m_epsilon)
    {
@@ -253,8 +253,8 @@ void NRICP::calculateNonRigidTransformation()
 
    delete X_prev;
 
-   float current_seconds = glfwGetTime();
-   float elapsed_seconds = current_seconds - previous_seconds;
+   GLfloat current_seconds = glfwGetTime();
+   GLfloat elapsed_seconds = current_seconds - previous_seconds;
    printf(" NRICP takes %f seconds \n ", elapsed_seconds);
 }
 
@@ -266,12 +266,12 @@ void NRICP::findCorrespondences()
 
       std::vector<GLfloat>* vertsTemplate = m_template->getVertices();
       Vector3f templateVertex;
-      float distance_left = 0.0;
-      float distance_right = 0.0;
-      unsigned int three_i;
+      GLfloat distance_left = 0.0;
+      GLfloat distance_right = 0.0;
+      GLuint three_i;
       m_W->setOnes();
 
-      for (unsigned int i = 0; i < m_templateVertCount; ++i)
+      for (GLuint i = 0; i < m_templateVertCount; ++i)
       {
         if(!(*m_hasLandmark)(i))
          {
@@ -333,7 +333,7 @@ void NRICP::findCorrespondences()
       }
 }
 
-void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int _targetStart, unsigned int _targetEnd)
+void NRICP::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd)
  {
       //Find closest points between template and target mesh
       //Store in U
@@ -343,17 +343,17 @@ void NRICP::findCorrespondences_Naive(unsigned int _templateIndex, unsigned int 
       std::vector<GLfloat>* vertsTarget = m_target->getVertices();
       Vector3f templateVertex;
       Vector3f targetVertex;
-      float distance = 0.0;
-      float minDistance = 1000.0;
+      GLfloat distance = 0.0;
+      GLfloat minDistance = 1000.0;
       bool foundCorrespondence = false;
       Vector3f auxUi(0.0, 0.0, 0.0);
-      unsigned int three_j;
+      GLuint three_j;
 
       templateVertex[0] = vertsTemplate->at(_templateIndex * 3);
       templateVertex[1] = vertsTemplate->at(_templateIndex * 3 + 1);
       templateVertex[2] = vertsTemplate->at(_templateIndex * 3 + 2);
 
-      for(unsigned int j=_targetStart; j<=_targetEnd; ++j)
+      for(GLuint j=_targetStart; j<=_targetEnd; ++j)
       {
        three_j = 3*j;
        targetVertex[0] = vertsTarget->at(three_j);
@@ -398,19 +398,19 @@ void NRICP::determineNonRigidOptimalDeformation()
   {
     //Find X = (At*A)-1 * At * B
     //For current stiffness
-    unsigned int i, four_i;
-    unsigned int v1, v2;
-    unsigned int four_v1, four_v2;
-    unsigned int auxRowIndex;
-    unsigned int sizeRowsMG = 4 * m_templateEdgeCount;
-    unsigned int weight;
+    GLuint i, four_i;
+    GLuint v1, v2;
+    GLuint four_v1, four_v2;
+    GLuint auxRowIndex;
+    GLuint sizeRowsMG = 4 * m_templateEdgeCount;
+    GLuint weight;
 
 
  //Alpha * M * G
    if(m_stiffnessChanged)
    {
     i = 0;
-    for(std::set< std::pair<unsigned int, unsigned int> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+    for(std::set< std::pair<GLuint, GLuint> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
       four_i = 4 * i; //for all edges
       v1 = it->first;
@@ -431,7 +431,7 @@ void NRICP::determineNonRigidOptimalDeformation()
    }
 
  //W * D
-    for(unsigned int i = 0; i < m_templateVertCount; ++i)
+    for(GLuint i = 0; i < m_templateVertCount; ++i)
     {
          auxRowIndex = i + sizeRowsMG;
          four_i = 4 * i;
@@ -470,7 +470,7 @@ void NRICP::solveLinearSystem()
 
 void NRICP::deformTemplate()
   {
-      unsigned int three_i, four_i;
+      GLuint three_i, four_i;
       std::vector<GLfloat>* vertices = m_template->getVertices();
       MatrixXf auxMultiplication(m_templateVertCount, 3);
       auxMultiplication = (*m_D) * (*m_X);
@@ -478,7 +478,7 @@ void NRICP::deformTemplate()
       //Change point values in m_D, which will change them in the mesh
       //Change points in the mesh
 
-      for(unsigned int i = 0; i < m_templateVertCount; ++i)
+      for(GLuint i = 0; i < m_templateVertCount; ++i)
       {
         three_i = 3 * i;
         four_i = 4 * i;
@@ -497,15 +497,15 @@ void NRICP::deformTemplate()
 
 
 
-float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
+GLfloat NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
   {
-    float norm = 0.0;
-    float diff = 0.0;
-    unsigned int floatCount = 4 * m_templateVertCount;
+    GLfloat norm = 0.0;
+    GLfloat diff = 0.0;
+    GLuint floatCount = 4 * m_templateVertCount;
 
-    for(unsigned int i=0; i < floatCount; ++i)
+    for(GLuint i=0; i < floatCount; ++i)
     {
-        for(unsigned int j=0; j<3; ++j)
+        for(GLuint j=0; j<3; ++j)
         {
             diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
             norm += diff*diff;
@@ -514,11 +514,11 @@ float NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
     return sqrt(norm);
   }
 
-float NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
+GLfloat NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
   {
-      float diff1 = _v1[0] - _v2[0];
-      float diff2 = _v1[1] - _v2[1];
-      float diff3 = _v1[2] - _v2[2];
+      GLfloat diff1 = _v1[0] - _v2[0];
+      GLfloat diff2 = _v1[1] - _v2[1];
+      GLfloat diff3 = _v1[2] - _v2[2];
 
       return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
   }
