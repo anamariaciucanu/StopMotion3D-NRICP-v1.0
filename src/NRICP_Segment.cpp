@@ -10,7 +10,10 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
     m_template = _template;
     m_target = _target;
 
+    m_templateSegmentVertCount = 0;
+    m_targetSegmentVertCount = 0;
     m_landmarkSegmentCorrespCount = 0;
+    m_templateSegmentEdgeCount = 0;
     m_beta = 1.0;
     m_epsilon = 3.0;
     m_gamma = 1.0;
@@ -47,23 +50,20 @@ void NRICP_Segment::initializeNRICP()
     initializeWUXVectors(); //m_W, m_U, m_X
     buildLandmarkArrays(); //landmarks in segment indices
 
-    m_hasLandmark->resize(m_templateSegmentVertCount);
-    m_hasLandmark->setZero();
-
     destroyPartitions(m_targetPartition);
     m_targetPartition = createPartitions(0, m_targetSegmentVertCount-1, m_targetPartition);
 
     //Sparse matrices A and B
-       m_templateSegmentEdgeCount = m_adjMat->size();
+    m_templateSegmentEdgeCount = m_adjMat->size();
 
     //Mighty matrices
-       GLuint sizeRowsMG = 4 * m_templateSegmentEdgeCount;
-       GLuint sizeColsA = 4 * m_templateSegmentVertCount;
+    GLuint sizeRowsMG = 4 * m_templateSegmentEdgeCount;
+    GLuint sizeColsA = 4 * m_templateSegmentVertCount;
 
-       m_A->resize(sizeRowsMG + m_templateSegmentVertCount, sizeColsA);
-       m_B->resize(sizeRowsMG + m_templateSegmentVertCount, 3);
-       m_A->reserve(2 * sizeRowsMG + sizeColsA);
-       m_B->reserve(3 * m_templateSegmentVertCount);
+    m_A->resize(sizeRowsMG + m_templateSegmentVertCount, sizeColsA);
+    m_B->resize(sizeRowsMG + m_templateSegmentVertCount, 3);
+    m_A->reserve(2 * sizeRowsMG + sizeColsA);
+    m_B->reserve(3 * m_templateSegmentVertCount);
 }
 
 
@@ -173,7 +173,8 @@ void NRICP_Segment::clearLandmarkCorrespondences()
 {
     m_templateSegmentLandmarks->clear();
     m_targetSegmentLandmarks->clear();
-    m_hasLandmark->setZero(m_templateSegmentVertCount);
+    m_hasLandmark->resize(m_templateSegmentVertCount);
+    m_hasLandmark->setZero();
     m_landmarkSegmentCorrespCount = 0;
     m_landmarksChanged = true;
 }
@@ -224,21 +225,21 @@ void NRICP_Segment::buildVertexIndexArrays()
     std::set<GLuint> targetSegmentVertIndices;
     std::set<GLuint>::iterator it1, it2;
 
+    m_templateSegmentVertIndices->clear();
+    m_targetSegmentVertIndices->clear();
+
     GLuint size = m_templateSegmentFaces->size();
-    for(GLuint i=0; i<size; ++i)
+    for(GLuint i = 0; i < size; ++i)
     {        
         templateSegmentVertIndices.insert(m_templateSegmentFaces->at(i));
     }
 
     //Target segment ==============================================
     size = m_targetSegmentFaces->size();
-    for(GLuint i=0; i<size; ++i)
+    for(GLuint i = 0; i < size; ++i)
     {
         targetSegmentVertIndices.insert(m_targetSegmentFaces->at(i));
     }   
-
-    m_templateSegmentVertIndices->clear();
-    m_targetSegmentVertIndices->clear();
 
     for(it1 = templateSegmentVertIndices.begin(); it1 != templateSegmentVertIndices.end(); ++it1)
     {
@@ -262,6 +263,7 @@ void NRICP_Segment::buildArcNodeMatrix()
     if(m_adjMat)
     {
      m_adjMat->clear();
+     m_templateSegmentEdgeCount = 0;
     }
     else
     {
@@ -361,14 +363,11 @@ void NRICP_Segment::buildLandmarkArrays()
 {
   std::vector<int>* templateLandmarks = m_template->getLandmarkVertexIndices();
   std::vector<int>* targetLandmarks = m_target->getLandmarkVertexIndices();
-
   int sizeTemplateLandmarks = (templateLandmarks) ? templateLandmarks->size() : 0;
   int sizeTargetLandmarks = (targetLandmarks) ? targetLandmarks->size() : 0;
-
-  m_templateSegmentLandmarks->clear();
-  m_targetSegmentLandmarks->clear();
-
   int segmentLandmarkIndex;
+
+  clearLandmarkCorrespondences();
 
   //Adding mesh landmarks
   for(int i=0; i<sizeTemplateLandmarks; ++i)
@@ -613,7 +612,6 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
      m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1) * weight;
      m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;
     }
-
 
      solveLinearSystem();
 }

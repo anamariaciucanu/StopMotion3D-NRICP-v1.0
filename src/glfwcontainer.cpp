@@ -12,7 +12,7 @@ GLFWContainer::GLFWContainer(int _width, int _height)
     m_objXRot = 0.0;
     m_objYRot = 0.0;
     m_objZRot = 0.0;
-    m_mesh = new Mesh*;
+    m_mesh = new Mesh*[2];
     m_clickActiveMeshIndex = 0;
 }
 
