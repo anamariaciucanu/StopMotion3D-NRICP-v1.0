@@ -2,6 +2,9 @@
 #include <OrderingMethods>
 #include <set>
 
+//(!) Observation: Paper proves that matrix A is nondegenerate and has column rank 4n...still, I believe
+// that since there are so many zeros in the matrix, values may become unstable, which is why we get so many artefacts
+
 
 //Indices are related to segment
 
@@ -47,7 +50,7 @@ void NRICP_Segment::initializeNRICP()
     buildVertexIndexArrays(); //Segment indices holding mesh indices
     buildArcNodeMatrix(); //m_adjMat
     buildVertexMatrix(); //m_D
-    initializeWUXVectors(); //m_W, m_U, m_X
+    initializeWUXSVectors(); //m_W, m_U, m_X
     buildLandmarkArrays(); //landmarks in segment indices
 
     destroyPartitions(m_targetPartition);
@@ -346,7 +349,7 @@ void NRICP_Segment::buildVertexMatrix()
 }
 
 
-void NRICP_Segment::initializeWUXVectors()
+void NRICP_Segment::initializeWUXSVectors()
 {
     m_W ->resize(m_templateSegmentVertCount);
     m_W->setOnes(m_templateSegmentVertCount);
@@ -417,6 +420,9 @@ void NRICP_Segment::calculateNonRigidTransformation()
    }
 
    delete X_prev;
+
+   m_template->calculateNormals();
+   m_target->calculateNormals();
 
    GLfloat current_seconds = glfwGetTime();
    GLfloat elapsed_seconds = current_seconds - previous_seconds;
@@ -539,12 +545,13 @@ void NRICP_Segment::findCorrespondences_Naive(GLuint _templateIndex, GLuint _tar
         if(foundCorrespondence)
         {
           Vector3f ray = auxUj - templateVertex;
+        //  float dotProduct = auxUj[0]*templateVertex[0] + auxUj[1]*templateVertex[1] + auxUj[2]*templateVertex[2];
           int intersection = m_template->whereIsIntersectingMesh(false, m_templateSegmentVertIndices->at(_templateIndex), templateVertex, ray);
-          if(intersection < 0) //No intersection - GooD!
+          if(intersection < 0) //&& dotProduct <= 1.0 && dotProduct >= 0.5) //No intersection - GooD & dot product small angle
           {
-            (*m_U)(_templateIndex, 0) = auxUj[0];
-            (*m_U)(_templateIndex, 1) = auxUj[1];
-            (*m_U)(_templateIndex, 2) = auxUj[2];
+             (*m_U)(_templateIndex, 0) = auxUj[0];
+             (*m_U)(_templateIndex, 1) = auxUj[1];
+             (*m_U)(_templateIndex, 2) = auxUj[2];
           }
           else
           {

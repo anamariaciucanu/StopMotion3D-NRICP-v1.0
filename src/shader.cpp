@@ -20,6 +20,7 @@ bool Shader::loadVertexShader(const char* _fileVertexShader)
  m_vertexShader = glCreateShader(GL_VERTEX_SHADER);
  glShaderSource(m_vertexShader, 1, &codeVertexShader, NULL);
  glCompileShader(m_vertexShader);
+ free(const_cast<char*>(codeVertexShader));
 
  int params = -1;
  glGetShaderiv(m_vertexShader, GL_COMPILE_STATUS, &params);
@@ -37,6 +38,7 @@ bool Shader::loadFragmentShader(const char* _fileFragmentShader)
  m_fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
  glShaderSource(m_fragmentShader, 1, &codeFragmentShader, NULL);
  glCompileShader(m_fragmentShader);
+ free(const_cast<char*>(codeFragmentShader));
 
  int params = -1;
  glGetShaderiv(m_fragmentShader, GL_COMPILE_STATUS, &params);

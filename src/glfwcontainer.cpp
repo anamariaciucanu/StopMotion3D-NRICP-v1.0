@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <unistd.h>
 
+//TO FIX (low priority): See if it better to turn Mesh** into a std::vector<Mesh*>
+
+
 GLFWContainer::GLFWContainer(int _width, int _height)
 {
     m_gl_width = _width;
@@ -276,13 +279,13 @@ void GLFWContainer::checkKeyPress()
      {
        m_nrICP_Segment->calculateNonRigidTransformation();
        m_nrICP_Segment->modifyStiffness(-1.0);
-       m_nrICP_Segment->modifyBeta(-0.001);       
+       m_nrICP_Segment->modifyBeta(-0.01);
      }
      else
      {
        m_nrICP->calculateNonRigidTransformation();
        m_nrICP->modifyStiffness(-1.0);
-       m_nrICP->modifyBeta(-0.001);
+       m_nrICP->modifyBeta(-0.01);
      }
 
       sleep(1.0);
@@ -360,7 +363,6 @@ void GLFWContainer::initializeDrawing()
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-
     //Load a scene ============================================================================
     float transformations[6] = {0.0, 0.0, 0.0, -0.7, 0.1, 0.0};
     loadMesh("../models/HelliDropter1.obj");
@@ -375,6 +377,7 @@ void GLFWContainer::initializeDrawing()
     m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[1]->moveObject(transformations[3], transformations[4], transformations[5]);
     m_mesh[1]->calculateEigenvectors();
+
 
     //Nonrigid Iterative Closest Point ========================================================
     m_nrICP = new NRICP(m_mesh[0], m_mesh[1]);

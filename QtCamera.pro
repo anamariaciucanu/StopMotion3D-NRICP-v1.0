@@ -47,7 +47,7 @@ DEPENDPATH += $$PWD/../../../Libs/eigen_1/Eigen
 
 
 #Multithreading
-QMAKE_CXXFLAGS += -fopenmp -O2 -DNDEBUG
+QMAKE_CXXFLAGS += -fopenmp -O2 #-DNDEBUG
 QMAKE_LIBS += -lgomp
 
 

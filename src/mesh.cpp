@@ -114,9 +114,6 @@ bool Mesh::loadMesh(const char *_fileName)
      return false;
     }
 
-    m_position[0] = 0.0;
-    m_position[1] = 0.0;
-    m_position[2] = 0.0;
 
     string line;
     while (getline(in, line))
@@ -133,9 +130,6 @@ bool Mesh::loadMesh(const char *_fileName)
            m_vertices->push_back((GLfloat)vert.v[1]);
            m_vertices->push_back((GLfloat)vert.v[2]);
            m_vertCount++;
-           m_position[0] += (GLfloat)vert.v[0];
-           m_position[1] += (GLfloat)vert.v[1];
-           m_position[2] += (GLfloat)vert.v[2];
 
            continue;
         }
@@ -207,16 +201,8 @@ bool Mesh::loadMesh(const char *_fileName)
         }
      }    
 
-    m_position = m_position/m_vertCount;
-    GLuint three_i;
-
-    for(GLuint i = 0; i < m_vertCount; i++)
-    {
-      three_i = 3*i;
-      m_vertices->at(three_i) = m_vertices->at(three_i) - m_position[0];
-      m_vertices->at(three_i + 1) = m_vertices->at(three_i + 1) - m_position[1];
-      m_vertices->at(three_i + 2) = m_vertices->at(three_i + 2) - m_position[2];
-    }
+    moveToCentre();
+    calculatePosition();
 
     return true;
 }
@@ -821,7 +807,7 @@ void Mesh::affineTransformation(MatrixXf _X)
         m_vertices->at(three_i + 1) = vertex[1];
         m_vertices->at(three_i + 2) = vertex[2];
     }
-
+    calculatePosition();
 }
 
 float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
@@ -860,10 +846,12 @@ void Mesh::moveObject(float _tX, float _tY, float _tZ)
 void Mesh::moveObject(Vector3f _trans)
 {
   moveObject(_trans[0], _trans[1], _trans[2]);
+  calculatePosition();
 }
 
 void Mesh::moveToCentre()
 {
+   calculatePosition();
    moveObject(-m_position[0], -m_position[1], -m_position[2]);
 }
 
@@ -1090,7 +1078,7 @@ void Mesh::segmentMesh()
     }
     else
     {
-      //Do nothing
+      //Do nothing, tralalalalalala
     }
 }
 

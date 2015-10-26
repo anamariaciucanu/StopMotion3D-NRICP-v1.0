@@ -26,7 +26,7 @@ void NRICP::initializeNRICP()
 {
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
-    m_stiffness = 10.0;
+    m_stiffness = 100.0;
     m_landmarkCorrespondenceCount = m_template->getLandmarkVertexIndices()->size();
     m_stiffnessChanged = true;
 

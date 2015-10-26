@@ -53,7 +53,7 @@ public:
    void buildVertexIndexArrays();
    void buildArcNodeMatrix();
    void buildVertexMatrix();
-   void initializeWUXVectors();
+   void initializeWUXSVectors();
    void buildLandmarkArrays();
    void addLandmarkInformation();
    void calculateNonRigidTransformation();

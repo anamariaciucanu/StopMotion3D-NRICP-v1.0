@@ -24,7 +24,7 @@ char* file_read(const char* _filename)
       if(fseek(input, 0, SEEK_SET) == -1) return NULL;
 
       /*if using c-compiler: dont cast malloc's return value*/
-      char *content = (char*) malloc( (size_t) size +1 );
+      char* content = (char*) malloc( (size_t)size +1 );
       if(content == NULL) return NULL;
 
       fread(content, 1, (size_t)size, input);
