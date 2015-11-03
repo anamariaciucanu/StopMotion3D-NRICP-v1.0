@@ -279,15 +279,14 @@ void GLFWContainer::checkKeyPress()
      {
        m_nrICP_Segment->calculateNonRigidTransformation();
        m_nrICP_Segment->modifyStiffness(-1.0);
-       m_nrICP_Segment->modifyBeta(-0.01);
+       m_nrICP_Segment->modifyBeta(-0.1);
      }
      else
      {
        m_nrICP->calculateNonRigidTransformation();
        m_nrICP->modifyStiffness(-1.0);
-       m_nrICP->modifyBeta(-0.01);
+       m_nrICP->modifyBeta(-0.1);
      }
-
       sleep(1.0);
     }
 }
@@ -364,19 +363,18 @@ void GLFWContainer::initializeDrawing()
     glFrontFace(GL_CCW);
 
     //Load a scene ============================================================================
-    float transformations[6] = {0.0, 0.0, 0.0, -0.7, 0.1, 0.0};
+    float transformations[6] = {0.0, -45, 0.0, 0.0, 0.0, 0.0};
     loadMesh("../models/HelliDropter1.obj");
     //loadMesh("../models/Cube1.obj");
     m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);
-    m_mesh[0]->calculateEigenvectors();
 
-    transformations[3] = 0.7;
+    transformations[1] = 90;
+    //transformations[3] = 0.7;
     loadMesh("../models/HelliDropter2.obj");
     //loadMesh("../models/Cube2.obj");
     m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
     m_mesh[1]->moveObject(transformations[3], transformations[4], transformations[5]);
-    m_mesh[1]->calculateEigenvectors();
 
 
     //Nonrigid Iterative Closest Point ========================================================

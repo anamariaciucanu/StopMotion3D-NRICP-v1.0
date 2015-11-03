@@ -8,7 +8,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
     m_target = _target;
-    m_beta = 1.0;
+    m_beta = 10.0;
     m_epsilon = 5.0;
     m_gamma = 1.0;
 
@@ -156,13 +156,13 @@ void NRICP::addLandmarkCorrespondence()
  int l1 = m_template->getPickedVertexIndex();
  int l2 = m_target->getPickedVertexIndex();
 
- if(l1 >=0 && l2 >= 0)
+ if(l1 >=0 && l1 < (GLuint)m_template->getVertCount()
+    && l2 >= 0 && l2 < (GLuint)m_target->getVertCount())
  {
    m_template->addLandmarkVertexIndex();
    m_target->addLandmarkVertexIndex();
    m_landmarkCorrespondenceCount ++;
    m_landmarksChanged = true;
-
  }
 }
 
@@ -219,12 +219,15 @@ void NRICP::calculateRigidTransformation()
     m_template->moveToCentre();
     m_target->moveToCentre();
 
+    m_template->calculateEigenvectors();
+    m_target->calculateEigenvectors();
+
     m_template->rotateByEigenVectors();
     m_target->rotateByEigenVectors();
 
     //Hardcoded auxiliaries
-    m_template->rotateObject(0, 90, -180);
-    m_target->rotateObject(0, -90, 0);
+    //m_template->rotateObject(0, 90, -180);
+  //  m_target->rotateObject(0, -90, 0);
 }
 
 
@@ -407,6 +410,7 @@ void NRICP::determineNonRigidOptimalDeformation()
 
 
  //Alpha * M * G
+
    if(m_stiffnessChanged)
    {
     i = 0;
@@ -415,17 +419,20 @@ void NRICP::determineNonRigidOptimalDeformation()
       four_i = 4 * i; //for all edges
       v1 = it->first;
       v2 = it->second;
-      four_v1 = 4 * v1;
-      four_v2 = 4 * v2;
-      m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
-      m_A->coeffRef(four_i + 1, four_v1 + 1) = (-1) * m_stiffness;
-      m_A->coeffRef(four_i + 2, four_v1 + 2) = (-1) * m_stiffness;
-      m_A->coeffRef(four_i + 3, four_v1 + 3) = (-1) * m_stiffness * m_gamma;
-      m_A->coeffRef(four_i, four_v2) = m_stiffness;
-      m_A->coeffRef(four_i + 1, four_v2 + 1) = m_stiffness;
-      m_A->coeffRef(four_i + 2, four_v2 + 2) = m_stiffness;
-      m_A->coeffRef(four_i + 3, four_v2 + 3) = m_stiffness * m_gamma;
-      i++;
+
+       four_v1 = 4 * v1;
+       m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
+       m_A->coeffRef(four_i + 1, four_v1 + 1) = (-1) * m_stiffness;
+       m_A->coeffRef(four_i + 2, four_v1 + 2) = (-1) * m_stiffness;
+       m_A->coeffRef(four_i + 3, four_v1 + 3) = (-1) * m_stiffness * m_gamma;
+
+       four_v2 = 4 * v2;
+       m_A->coeffRef(four_i, four_v2) = m_stiffness;
+       m_A->coeffRef(four_i + 1, four_v2 + 1) = m_stiffness;
+       m_A->coeffRef(four_i + 2, four_v2 + 2) = m_stiffness;
+       m_A->coeffRef(four_i + 3, four_v2 + 3) = m_stiffness * m_gamma;
+
+     i++;
      }
      m_stiffnessChanged = false;
    }
@@ -433,22 +440,22 @@ void NRICP::determineNonRigidOptimalDeformation()
  //W * D
     for(GLuint i = 0; i < m_templateVertCount; ++i)
     {
-         auxRowIndex = i + sizeRowsMG;
-         four_i = 4 * i;
-         weight = (*m_W)(i);
+      auxRowIndex = i + sizeRowsMG;
+      four_i = 4 * i;
+      weight = (*m_W)(i);
 
-         m_A->coeffRef(auxRowIndex, four_i) = m_D->coeff(i, four_i) * weight;
-         m_A->coeffRef(auxRowIndex, four_i + 1) = m_D->coeff(i, four_i + 1) * weight;
-         m_A->coeffRef(auxRowIndex, four_i + 2) = m_D->coeff(i, four_i + 2) * weight;
-         m_A->coeffRef(auxRowIndex, four_i + 3) = m_D->coeff(i, four_i + 3) * weight;
+      m_A->coeffRef(auxRowIndex, four_i) = m_D->coeff(i, four_i) * weight;
+      m_A->coeffRef(auxRowIndex, four_i + 1) = m_D->coeff(i, four_i + 1) * weight;
+      m_A->coeffRef(auxRowIndex, four_i + 2) = m_D->coeff(i, four_i + 2) * weight;
+      m_A->coeffRef(auxRowIndex, four_i + 3) = m_D->coeff(i, four_i + 3) * weight;
 
-         //Obs! Weight already added
-         m_B->coeffRef(auxRowIndex, 0) = (*m_U)(i, 0) * weight;
-         m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1) * weight;
-         m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;     
+      //Obs! Weight already added
+      m_B->coeffRef(auxRowIndex, 0) = (*m_U)(i, 0) * weight;
+      m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1) * weight;
+      m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;
     }  
 
-     solveLinearSystem();
+    solveLinearSystem();
 }
 
 void NRICP::solveLinearSystem()

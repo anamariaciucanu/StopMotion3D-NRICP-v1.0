@@ -853,6 +853,7 @@ void Mesh::moveToCentre()
 {
    calculatePosition();
    moveObject(-m_position[0], -m_position[1], -m_position[2]);
+   calculatePosition();
 }
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
@@ -997,9 +998,9 @@ void Mesh::calculateEigenvectors()
     for(GLuint i=0; i<m_vertCount; ++i)
     {
        three_i = 3*i;
-       v[0] = m_vertices->at(three_i) - m_position[0];
-       v[1] = m_vertices->at(three_i+1) - m_position[1];
-       v[2] = m_vertices->at(three_i+2) - m_position[2];
+       v[0] = m_vertices->at(three_i);
+       v[1] = m_vertices->at(three_i+1);
+       v[2] = m_vertices->at(three_i+2);
 
        for(GLuint j=0; j<3; ++j)
        {
@@ -1009,7 +1010,7 @@ void Mesh::calculateEigenvectors()
          }
        }
     }
-    covarianceMatrix /= (m_vertCount-1);
+    covarianceMatrix /= m_vertCount;
 
     SelfAdjointEigenSolver<Matrix3f> es;
     es.compute(covarianceMatrix);
