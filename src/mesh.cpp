@@ -950,10 +950,15 @@ void Mesh::rotateByEigenVectors()
       for(GLuint k=0; k<3; ++k)
       {
         for(GLuint l=0; l<3; ++l)
-        {
-            if(abs(A(k,l)) > 0.8)
+        {            
+            if(A(k,l) > 0.8)
             {
               B(k,l) = 1.0;
+            }
+            else
+            if(A(k, l) < -0.8)
+            {
+             B(k, l) = -1.0;
             }
         }
       }

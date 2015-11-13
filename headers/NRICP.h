@@ -30,8 +30,6 @@ class NRICP
     GLuint m_templateEdgeCount;
  ///@brief Unsigned integer -> the number of vertices in the target
     GLuint m_targetVertCount;
- ///@brief Unsigned integer -> the number of landmark corresponences
-    GLuint m_landmarkCorrespondenceCount;
  ///@brief Pointer to Mesh class object -> template mesh
     Mesh* m_template;
  ///@brief Pointer to Mesh class object -> target mesh
@@ -149,5 +147,9 @@ class NRICP
     Mesh* getTarget() { return m_target; }
     bool haveLandmarksChanged() { return m_landmarksChanged; }
     void setLandmarksChanged(bool _value) { m_landmarksChanged = _value; }
+    GLfloat getDotProduct(Vector3f _v1, Vector3f _v2)
+    {
+        return _v1[0] * _v2[0] + _v1[1] * _v2[1] + _v1[2] * _v2[2];
+    }
 };
 #endif // NRICP_H

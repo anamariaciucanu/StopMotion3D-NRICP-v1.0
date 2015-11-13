@@ -8,7 +8,7 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
     m_template = _template;
     m_target = _target;
-    m_beta = 10.0;
+    m_beta = 1.0;
     m_epsilon = 5.0;
     m_gamma = 1.0;
 
@@ -27,7 +27,6 @@ void NRICP::initializeNRICP()
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
     m_stiffness = 100.0;
-    m_landmarkCorrespondenceCount = m_template->getLandmarkVertexIndices()->size();
     m_stiffnessChanged = true;
 
     // Defining adjMat
@@ -161,7 +160,6 @@ void NRICP::addLandmarkCorrespondence()
  {
    m_template->addLandmarkVertexIndex();
    m_target->addLandmarkVertexIndex();
-   m_landmarkCorrespondenceCount ++;
    m_landmarksChanged = true;
  }
 }
@@ -171,7 +169,6 @@ void NRICP::clearLandmarkCorrespondences()
     m_template->clearLandmarkVertexIndices();
     m_target->clearLandmarkVertexIndices();
     m_hasLandmark->setZero();
-    m_landmarkCorrespondenceCount = 0;
     m_landmarksChanged = true;
 }
 
@@ -186,9 +183,10 @@ void NRICP::addLandmarkInformation()
    std::vector<int>* landmarksTemplate = m_template->getLandmarkVertexIndices();
    std::vector<int>* landmarksTarget = m_target->getLandmarkVertexIndices();
    int four_l1, l1, l2;
+   int landmarkCorrespondenceCount = landmarksTemplate->size();
    Vector3f l1_point, l2_point;
 
-   for(GLuint i = 0; i < m_landmarkCorrespondenceCount; ++i)
+   for(GLuint i = 0; i < landmarkCorrespondenceCount; ++i)
    {
      l1 = landmarksTemplate->at(i);
      l2 = landmarksTarget->at(i);
@@ -213,6 +211,37 @@ void NRICP::addLandmarkInformation()
    }
 }
 
+GLfloat NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
+  {
+    GLfloat norm = 0.0;
+    GLfloat diff = 0.0;
+    GLuint floatCount = 4 * m_templateVertCount;
+
+    for(GLuint i=0; i < floatCount; ++i)
+    {
+        for(GLuint j=0; j<3; ++j)
+        {
+            diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
+            norm += diff*diff;
+        }
+    }
+    return sqrt(norm);
+  }
+
+GLfloat NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
+  {
+      GLfloat diff1 = _v1[0] - _v2[0];
+      GLfloat diff2 = _v1[1] - _v2[1];
+      GLfloat diff3 = _v1[2] - _v2[2];
+
+      return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+  }
+
+
+
+//NRICP ===========================================================================
+
+
 void NRICP::calculateRigidTransformation()
 {
     //PCA
@@ -224,12 +253,7 @@ void NRICP::calculateRigidTransformation()
 
     m_template->rotateByEigenVectors();
     m_target->rotateByEigenVectors();
-
-    //Hardcoded auxiliaries
-    //m_template->rotateObject(0, 90, -180);
-  //  m_target->rotateObject(0, -90, 0);
 }
-
 
 void NRICP::calculateNonRigidTransformation()
 {
@@ -278,7 +302,6 @@ void NRICP::findCorrespondences()
       {
         if(!(*m_hasLandmark)(i))
          {
-              (*m_U)(i) = 0;
               three_i = 3*i;
               templateVertex[0] = vertsTemplate->at(three_i);
               templateVertex[1] = vertsTemplate->at(three_i + 1);
@@ -346,11 +369,15 @@ void NRICP::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart
       std::vector<GLfloat>* vertsTarget = m_target->getVertices();
       Vector3f templateVertex;
       Vector3f targetVertex;
+      Vector3f auxUi(0.0, 0.0, 0.0);
+      //Vector3f templateNormal;
+      //Vector3f targetNormal;
       GLfloat distance = 0.0;
       GLfloat minDistance = 1000.0;
-      bool foundCorrespondence = false;
-      Vector3f auxUi(0.0, 0.0, 0.0);
+      //GLfloat dotProduct;
       GLuint three_j;
+      GLuint targetIndex;
+      bool foundCorrespondence = false;
 
       templateVertex[0] = vertsTemplate->at(_templateIndex * 3);
       templateVertex[1] = vertsTemplate->at(_templateIndex * 3 + 1);
@@ -371,6 +398,7 @@ void NRICP::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart
          auxUi[2] = targetVertex[2];
          minDistance = distance;
          foundCorrespondence = true;
+         targetIndex = j;
         }
        }
 
@@ -380,9 +408,25 @@ void NRICP::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart
           int intersection = m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray);
           if(intersection < 0) //No intersection - GooD!
           {
-            (*m_U)(_templateIndex, 0) = auxUi[0];
-            (*m_U)(_templateIndex, 1) = auxUi[1];
-            (*m_U)(_templateIndex, 2) = auxUi[2];
+           // What about normals
+
+           // templateNormal = m_template->getNormal(_templateIndex);
+           // targetNormal = m_target->getNormal(targetIndex);
+           // dotProduct = getDotProduct(templateNormal, targetNormal);
+           // printf("Dot product IZ %f \n", dotProduct);
+
+           // if(dotProduct >= 0.0 && dotProduct <= 1.0)
+           // {
+               (*m_U)(_templateIndex, 0) = auxUi[0];
+               (*m_U)(_templateIndex, 1) = auxUi[1];
+               (*m_U)(_templateIndex, 2) = auxUi[2];
+           //  Addition to original algorithm
+           //  (*m_W)(_templateIndex) = exp(-minDistance/10);
+           // }
+           // else
+           // {
+           //  (*m_W)(_templateIndex) = 0.0;
+           // }
           }
           else
           {
@@ -416,17 +460,17 @@ void NRICP::determineNonRigidOptimalDeformation()
     i = 0;
     for(std::set< std::pair<GLuint, GLuint> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
-      four_i = 4 * i; //for all edges
-      v1 = it->first;
-      v2 = it->second;
-
+       four_i = 4 * i; //for all edges
+       v1 = it->first;
+       v2 = it->second;
        four_v1 = 4 * v1;
+       four_v2 = 4 * v2;
+
        m_A->coeffRef(four_i, four_v1) = (-1) * m_stiffness;
        m_A->coeffRef(four_i + 1, four_v1 + 1) = (-1) * m_stiffness;
        m_A->coeffRef(four_i + 2, four_v1 + 2) = (-1) * m_stiffness;
        m_A->coeffRef(four_i + 3, four_v1 + 3) = (-1) * m_stiffness * m_gamma;
 
-       four_v2 = 4 * v2;
        m_A->coeffRef(four_i, four_v2) = m_stiffness;
        m_A->coeffRef(four_i + 1, four_v2 + 1) = m_stiffness;
        m_A->coeffRef(four_i + 2, four_v2 + 2) = m_stiffness;
@@ -449,7 +493,6 @@ void NRICP::determineNonRigidOptimalDeformation()
       m_A->coeffRef(auxRowIndex, four_i + 2) = m_D->coeff(i, four_i + 2) * weight;
       m_A->coeffRef(auxRowIndex, four_i + 3) = m_D->coeff(i, four_i + 3) * weight;
 
-      //Obs! Weight already added
       m_B->coeffRef(auxRowIndex, 0) = (*m_U)(i, 0) * weight;
       m_B->coeffRef(auxRowIndex, 1) = (*m_U)(i, 1) * weight;
       m_B->coeffRef(auxRowIndex, 2) = (*m_U)(i, 2) * weight;
@@ -503,31 +546,5 @@ void NRICP::deformTemplate()
 
 
 
-
-GLfloat NRICP::normedDifference(MatrixXf* _Xj_1, MatrixXf* _Xj)
-  {
-    GLfloat norm = 0.0;
-    GLfloat diff = 0.0;
-    GLuint floatCount = 4 * m_templateVertCount;
-
-    for(GLuint i=0; i < floatCount; ++i)
-    {
-        for(GLuint j=0; j<3; ++j)
-        {
-            diff = (*_Xj)(i, j) - (*_Xj_1)(i, j);
-            norm += diff*diff;
-        }
-    }
-    return sqrt(norm);
-  }
-
-GLfloat NRICP::euclideanDistance(Vector3f _v1, Vector3f _v2)
-  {
-      GLfloat diff1 = _v1[0] - _v2[0];
-      GLfloat diff2 = _v1[1] - _v2[1];
-      GLfloat diff3 = _v1[2] - _v2[2];
-
-      return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
-  }
 
 
