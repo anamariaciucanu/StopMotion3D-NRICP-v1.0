@@ -398,7 +398,7 @@ void NRICP_Segment::buildLandmarkArrays()
 //Nonrigid transformations
 void NRICP_Segment::calculateNonRigidTransformation()
 {
-  GLfloat previous_seconds = glfwGetTime();
+   GLfloat previous_seconds = glfwGetTime();
 
    MatrixXf* X_prev = new MatrixXf(4 * m_templateSegmentVertCount, 3);
    X_prev->setZero(4 * m_templateSegmentVertCount, 3);
@@ -490,7 +490,8 @@ void NRICP_Segment::findCorrespondences()
 
           if(previous)
           {
-            findCorrespondences_Naive(i, previous->start, previous->end);
+            findCorrespondences_Naive(i, 0, m_targetSegmentVertCount-1);
+            //TO FIX: Sphere hierarchy previous->start, previous->end);
           }
 
           else
@@ -545,9 +546,8 @@ void NRICP_Segment::findCorrespondences_Naive(GLuint _templateIndex, GLuint _tar
         if(foundCorrespondence)
         {
           Vector3f ray = auxUj - templateVertex;
-        //  float dotProduct = auxUj[0]*templateVertex[0] + auxUj[1]*templateVertex[1] + auxUj[2]*templateVertex[2];
           int intersection = m_template->whereIsIntersectingMesh(false, m_templateSegmentVertIndices->at(_templateIndex), templateVertex, ray);
-          if(intersection < 0) //&& dotProduct <= 1.0 && dotProduct >= 0.5) //No intersection - GooD & dot product small angle
+          if(intersection < 0) //No intersection - GooD
           {
              (*m_U)(_templateIndex, 0) = auxUj[0];
              (*m_U)(_templateIndex, 1) = auxUj[1];
@@ -579,11 +579,11 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
     GLuint sizeRowsMG = 4 * m_templateSegmentEdgeCount;
     GLfloat weight;
 
- //Alpha * M * G
-   if(m_stiffnessChanged)
-   {
-    i = 0;
-    for(std::set< std::pair<GLuint, GLuint> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
+    //Alpha * M * G
+    if(m_stiffnessChanged)
+    {
+     i = 0;
+     for(std::set< std::pair<GLuint, GLuint> >::iterator it = m_adjMat->begin(); it != m_adjMat->end(); ++it)
      {
       four_i = 4 * i; //for all edges
       v1 = it->first;
@@ -601,7 +601,7 @@ void NRICP_Segment::determineNonRigidOptimalDeformation()
       i++;
      }
      m_stiffnessChanged = false;
-   }
+    }
 
  //W * D
     for(GLuint i = 0; i < m_templateSegmentVertCount; ++i)

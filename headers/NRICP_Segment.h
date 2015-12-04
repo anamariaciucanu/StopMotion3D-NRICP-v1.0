@@ -79,7 +79,7 @@ public:
      m_beta += _value;
      if(m_beta < 0.0)
      {
-         m_beta = 0.0;
+         m_beta = 0.01;
      }
    }
    void addLandmarkCorrespondence();

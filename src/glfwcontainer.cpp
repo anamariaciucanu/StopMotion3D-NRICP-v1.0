@@ -6,7 +6,6 @@
 
 //TO FIX (low priority): See if it better to turn Mesh** into a std::vector<Mesh*>
 
-
 GLFWContainer::GLFWContainer(int _width, int _height)
 {
     m_gl_width = _width;
@@ -279,13 +278,13 @@ void GLFWContainer::checkKeyPress()
      {
        m_nrICP_Segment->calculateNonRigidTransformation();
        m_nrICP_Segment->modifyStiffness(-1.0);
-     //  m_nrICP_Segment->modifyBeta(-0.001);
+      // m_nrICP_Segment->modifyBeta(-0.001);
      }
      else
      {
        m_nrICP->calculateNonRigidTransformation();
        m_nrICP->modifyStiffness(-1.0);
-     //  m_nrICP->modifyBeta(-0.0005);
+      // m_nrICP->modifyBeta(-0.001);
      }
       sleep(1.0);
     }
@@ -363,16 +362,16 @@ void GLFWContainer::initializeDrawing()
     glFrontFace(GL_CCW);
 
     //Load a scene ============================================================================
-  //  float transformations[6] = {0.0, -15, 0.0, 0.0, 0.0, 0.0};
-    loadMesh("../models/Hellidropter2.obj");
+    //float transformations[6] = {0.0, 0.0, 0.0, 0.7, 0.0, 0.0};
+    loadMesh("../models/HelliDropter2_Mesh.obj");
     // loadMesh("../models/Cube1.obj");
     // m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
-    // m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);
+    //m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);
 
-    loadMesh("../models/Hellidropter1.obj");
+    loadMesh("../models/Hellidropter1_Mesh.obj");
     //loadMesh("../models/Cube2.obj");
    // m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
-   // m_mesh[1]->moveObject(transformations[3], transformations[4], transformations[5]);
+    //m_mesh[1]->moveObject(-transformations[3], transformations[4], transformations[5]);
 
 
     //Nonrigid Iterative Closest Point ========================================================
