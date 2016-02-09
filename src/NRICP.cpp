@@ -28,8 +28,7 @@ void NRICP::initializeNRICP()
     m_targetVertCount = m_target->getVertCount();
     m_stiffness = 100.0;
     m_stiffnessChanged = true;
-//Testing
-    int a=2;
+
     // Defining adjMat
         m_adjMat = m_template->getAdjMat();
         if(!m_adjMat)
