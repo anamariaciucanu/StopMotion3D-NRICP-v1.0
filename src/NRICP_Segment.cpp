@@ -1,3 +1,5 @@
+#define THRESHOLD 0.1
+#define RADIUS 0.2
 #include "NRICP_Segment.h"
 #include <OrderingMethods>
 #include <set>
@@ -552,6 +554,31 @@ void NRICP_Segment::findCorrespondences_Naive(GLuint _templateIndex, GLuint _tar
              (*m_U)(_templateIndex, 0) = auxUj[0];
              (*m_U)(_templateIndex, 1) = auxUj[1];
              (*m_U)(_templateIndex, 2) = auxUj[2];
+
+             //Modify weights based on the distance to the segmentation plane
+             //Weight formula taken from Li et. al (2009)
+             GLfloat dP = calculatePointToPlaneDistance(templateVertex);
+
+            if(dP <= THRESHOLD)
+             {
+              GLfloat weight = max (0.0, 1 - pow((pow(dP, 2)/pow(RADIUS, 2)), 3));
+              (*m_W)(_templateIndex) = weight;
+
+              /*
+              std::ofstream input1;
+              input1.open("../logs/distancePlane.txt",std::ios_base::app);
+              std::ofstream input2;
+              input2.open("../logs/weights.txt", std::ios_base::app);
+
+              input1 << dP <<"\n";
+              input2 << weight<<"\n";
+
+              input1.flush();
+              input2.flush();
+              input1.close();
+              input2.close();
+              */
+             }
           }
           else
           {
@@ -722,18 +749,16 @@ int NRICP_Segment::findValue(GLuint _value, std::vector<GLuint>* _vector)
     return result;
 }
 
-GLfloat NRICP_Segment::calculateSegmentPlaneProximity(int _i)
+GLfloat NRICP_Segment::calculatePointToPlaneDistance(Vector3f _point)
 {
-  Vector3f templateIndex = m_template->getVertex(m_templateSegmentVertIndices->at(_i));
-  Vector3i segmentationPlane = m_template->getActivePlane();
-  Vector3f planeCenter = m_template->calculateCentre(segmentationPlane[0], segmentationPlane[1], segmentationPlane[2]);
-  GLfloat distance = euclideanDistance(templateIndex, planeCenter);
-  GLfloat proximityRatio = sin(distance);
+  Vector3f planeCenter = m_template->calculateActiveSegmentationPlaneCentre();
+  Vector3f pointCentre = _point - planeCenter;
+  Vector3f planeNormal = m_template->calculateActiveSegmentationPlaneNormal();
+  GLfloat normalMagnitude = euclideanDistance(Vector3f(0, 0, 0), planeNormal);
 
-  printf("Distance from active plane %.2f \n", distance);
-  printf("Proximity %.2f \n", proximityRatio);
+  GLfloat distance = (fabs(pointCentre.dot(planeNormal)))/normalMagnitude;
 
-  return proximityRatio;
+  return distance;
 }
 
 GLfloat NRICP_Segment::maxDistanceFromPoint(Vector3f _point)

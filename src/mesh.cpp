@@ -1257,6 +1257,28 @@ Vector3f Mesh::calculateCentre(int _p1, int _p2, int _p3)
 }
 
 
+Vector3f Mesh::calculateActiveSegmentationPlaneCentre()
+{
+    Vector3i activePlane = getActivePlane();
+    return calculateCentre(activePlane[0], activePlane[1], activePlane[2]);
+}
+
+Vector3f Mesh::calculateActiveSegmentationPlaneNormal()
+{
+    Vector3i activePlane = getActivePlane();
+    Vector3f point1, point2, point3;
+
+    for(GLuint i=0; i<3; ++i)
+    {
+      point1[i] = m_vertices->at(3*activePlane[0] + i);
+      point2[i] = m_vertices->at(3*activePlane[1] + i);
+      point3[i] = m_vertices->at(3*activePlane[2] + i);
+    }
+
+    return (point2 - point1).cross(point3 - point1);
+}
+
+
 
 
 

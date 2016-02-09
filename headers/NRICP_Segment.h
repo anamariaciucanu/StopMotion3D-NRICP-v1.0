@@ -85,7 +85,7 @@ public:
    void addLandmarkCorrespondence();
    void clearLandmarkCorrespondences();
    int findValue(GLuint _value, std::vector<GLuint>* _vector);
-  GLfloat calculateSegmentPlaneProximity(int _i);
+  GLfloat calculatePointToPlaneDistance(Vector3f _point);
   GLfloat maxDistanceFromPoint(Vector3f _point);
 
 

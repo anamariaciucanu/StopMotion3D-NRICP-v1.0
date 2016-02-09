@@ -363,7 +363,7 @@ void GLFWContainer::initializeDrawing()
 
     //Load a scene ============================================================================
     //float transformations[6] = {0.0, 0.0, 0.0, 0.7, 0.0, 0.0};
-    loadMesh("../models/HelliDropter2_Mesh.obj");
+    loadMesh("../models/Hellidropter2_Mesh.obj");
     // loadMesh("../models/Cube1.obj");
     // m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
     //m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);

@@ -197,7 +197,8 @@ class Mesh
     void createSegmentList();
     void destroySegments(Segmentation *_segmentation);
     Vector3f calculateCentre(int _p1, int _p2, int _p3);
-
+    Vector3f calculateActiveSegmentationPlaneCentre();
+    Vector3f calculateActiveSegmentationPlaneNormal();
 
 /// Setters and Getters of the private members
     std::vector<GLfloat>* getVertices(){ return m_vertices; }
@@ -336,6 +337,7 @@ class Mesh
     {
         m_activeSegment = (m_activeSegment + 1) % m_segments.size();
     }
+
 
 };
 #endif // MESH_H
