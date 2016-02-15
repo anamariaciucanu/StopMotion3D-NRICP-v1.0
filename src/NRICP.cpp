@@ -3,6 +3,11 @@
 
 //TO DO: m_landmarkCorrespChanged not used anywhere
 //TO DO: clean to look like NRICP_Segment
+//TO DO: Stiffness will be an array calculated at each iteration for each vertex
+//TO DO: Optimize and debug determineNonRigidOptimalDeformation
+//TO DO: Adapt KD-tree NN search for different buckets
+//TO DO: Play more with various weights
+//TO DO: Fix local minima errors that keep appearing
 
 NRICP::NRICP(Mesh* _template,  Mesh* _target)
 {
@@ -12,7 +17,6 @@ NRICP::NRICP(Mesh* _template,  Mesh* _target)
     m_epsilon = 5.0;
     m_gamma = 1.0;
 
-    m_targetPartition = NULL;
     m_W = new VectorXi();
     m_hasLandmark = new VectorXi();
     m_U = new MatrixXf();
@@ -26,7 +30,7 @@ void NRICP::initializeNRICP()
 {
     m_templateVertCount = m_template->getVertCount();
     m_targetVertCount = m_target->getVertCount();
-    m_stiffness = 100.0;
+    m_stiffness = 10.0;
     m_stiffnessChanged = true;
 
     // Defining adjMat
@@ -61,10 +65,6 @@ void NRICP::initializeNRICP()
         m_X->resize(4 * m_templateVertCount, 3);
         m_X->setZero(4 * m_templateVertCount, 3);
 
-    // Defining Sphere Partitions
-       destroyPartitions(m_targetPartition);
-       m_targetPartition = createPartitions(0, m_targetVertCount-1, m_targetPartition);
-
     //Sparse matrices A and B
        m_templateEdgeCount = m_template->getEdgeCount();
 
@@ -87,76 +87,16 @@ NRICP::~NRICP()
     m_X->resize(0, 0);
     m_A->resize(0, 0);
     m_B->resize(0, 0);
-
-    destroyPartitions(m_targetPartition);
 }
 
-SpherePartition* NRICP::createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition)
-{
-    GLuint three_i;
-
-    //Observation: This assumes vertex data is in order
-    _partition = new SpherePartition();
-    _partition->start = _start;
-    _partition->end = _end;
-    _partition->average[0] = 0.0;
-    _partition->average[1] = 0.0;
-    _partition->average[2] = 0.0;
-
-    std::vector<GLfloat>* targetVertices = m_target->getVertices();
-
-
-    for(GLuint i=_start; i<=_end; ++i)
-    {
-      three_i = 3*i;
-      _partition->average[0] += targetVertices->at(three_i);
-      _partition->average[1] += targetVertices->at(three_i + 1);
-      _partition->average[2] += targetVertices->at(three_i + 2);
-    }
-
-     GLuint noElem = _end - _start + 1;
-
-    _partition->average[0] /= noElem;
-    _partition->average[1] /= noElem;
-    _partition->average[2] /= noElem;
-
-    if(noElem > 3)
-    {
-     _partition->left = createPartitions(_start, _start+noElem/2, _partition->left);
-     _partition->right = createPartitions(_start+noElem/2+1, _end, _partition->right);
-    }
-
-    return _partition;
-}
-
-void NRICP::destroyPartitions(SpherePartition* _partition)
-{
-    if(_partition)
-    {
-        if(!_partition->left && !_partition->right)
-        {
-            delete _partition;
-        }
-
-        if (_partition->right)
-        {
-           destroyPartitions(_partition->right);
-        }
-
-        if (_partition->left)
-        {
-           destroyPartitions(_partition->left);
-        }
-    }
-}
 
 void NRICP::addLandmarkCorrespondence()
 {
  int l1 = m_template->getPickedVertexIndex();
  int l2 = m_target->getPickedVertexIndex();
 
- if(l1 >=0 && l1 < (GLuint)m_template->getVertCount()
-    && l2 >= 0 && l2 < (GLuint)m_target->getVertCount())
+ if(l1 >=0 && l1 < (int)m_template->getVertCount()
+    && l2 >= 0 && l2 < (int)m_target->getVertCount())
  {
    m_template->addLandmarkVertexIndex();
    m_target->addLandmarkVertexIndex();
@@ -186,7 +126,7 @@ void NRICP::addLandmarkInformation()
    int landmarkCorrespondenceCount = landmarksTemplate->size();
    Vector3f l1_point, l2_point;
 
-   for(GLuint i = 0; i < landmarkCorrespondenceCount; ++i)
+   for(int i = 0; i < landmarkCorrespondenceCount; ++i)
    {
      l1 = landmarksTemplate->at(i);
      l2 = landmarksTarget->at(i);
@@ -287,157 +227,59 @@ void NRICP::calculateNonRigidTransformation()
 
 
 void NRICP::findCorrespondences()
-{    
+{
     //If a landmark is not already in place, we find a correspondence
     //Else we use landmark information
 
-      std::vector<GLfloat>* vertsTemplate = m_template->getVertices();
       Vector3f templateVertex;
-      GLfloat distance_left = 0.0;
-      GLfloat distance_right = 0.0;
-      GLuint three_i;
+      Vector3f targetVertex;
+      int targetIndex;
+      //Very important to reset weights to 1
       m_W->setOnes();
+
 
       for (GLuint i = 0; i < m_templateVertCount; ++i)
       {
         if(!(*m_hasLandmark)(i))
          {
-              three_i = 3*i;
-              templateVertex[0] = vertsTemplate->at(three_i);
-              templateVertex[1] = vertsTemplate->at(three_i + 1);
-              templateVertex[2] = vertsTemplate->at(three_i + 2);
-              SpherePartition* previous = NULL;
-              SpherePartition* aux = NULL;
-              SpherePartition* current = m_targetPartition;
+              templateVertex = m_template->getVertex(i);
+              targetIndex = m_target->findClosestPoint(templateVertex);
 
-              while(current)
-              {
-                  Vector3f targetSphere_left(1000.0, 1000.0, 1000.0);
-                  Vector3f targetSphere_right(1000.0, 1000.0, 1000.0);
-
-                  if(current->left)
+              if(targetIndex >= 0)
+               {
+                 targetVertex = m_target->getVertex((GLuint)targetIndex);
+                 Vector3f ray = targetVertex - templateVertex;
+                 int intersection = m_template->whereIsIntersectingMesh(false, i, templateVertex, ray);
+                 if(intersection < 0) //No intersection - GooD!
                   {
-                    targetSphere_left[0] = current->left->average[0];
-                    targetSphere_left[1] = current->left->average[1];
-                    targetSphere_left[2] = current->left->average[2];
-                  }
+                    // templateNormal = m_template->getNormal(i);
+                    // targetNormal = m_target->getNormal(targetIndex);
+                    // dotProduct = getDotProduct(templateNormal, targetNormal);
+                    // printf("Dot product IZ %f \n", dotProduct);
 
-                  if(current->right)
-                  {
-                      targetSphere_right[0] = current->right->average[0];
-                      targetSphere_right[1] = current->right->average[1];
-                      targetSphere_right[2] = current->right->average[2];
-                  }
-
-                  distance_left = euclideanDistance(templateVertex, targetSphere_left);
-                  distance_right = euclideanDistance(templateVertex, targetSphere_right);
-
-                  if(distance_left < distance_right)
-                  {
-                    aux = current;
-                    previous = current;
-                    current = aux->left;
-                  }
-                  else
-                  {
-                      aux = current;
-                      previous = current;
-                      current = aux->right;
-                  }
-              }
-
-              if(previous)
-              {
-                findCorrespondences_Naive(i, previous->start, previous->end);
-              }
-
-              else
-              {
-                (*m_W)(i) = 0.0;
-              }
+                    // if(dotProduct >= 0.0 && dotProduct <= 1.0)
+                    // {
+                       (*m_U)(i, 0) = targetVertex[0];
+                       (*m_U)(i, 1) = targetVertex[1];
+                       (*m_U)(i, 2) = targetVertex[2];
+                    // }
+                    // else
+                    // {
+                    //  (*m_W)(_templateIndex) = 0.0;
+                    // }
+                   }
+                   else //There was a self-intersection in the template
+                   {
+                    (*m_W)(i) = 0.0;
+                   }
+                }
+                else //Target correspondence was not found
+                {
+                  (*m_W)(i) = 0.0;
+                }
          }
       }
 }
-
-void NRICP::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd)
- {
-      //Find closest points between template and target mesh
-      //Store in U
-      //Store values in W - see 4.4.
-
-      std::vector<GLfloat>* vertsTemplate = m_template->getVertices();
-      std::vector<GLfloat>* vertsTarget = m_target->getVertices();
-      Vector3f templateVertex;
-      Vector3f targetVertex;
-      Vector3f auxUi(0.0, 0.0, 0.0);
-      //Vector3f templateNormal;
-      //Vector3f targetNormal;
-      GLfloat distance = 0.0;
-      GLfloat minDistance = 1000.0;
-      //GLfloat dotProduct;
-      GLuint three_j;
-      GLuint targetIndex;
-      bool foundCorrespondence = false;
-
-      templateVertex[0] = vertsTemplate->at(_templateIndex * 3);
-      templateVertex[1] = vertsTemplate->at(_templateIndex * 3 + 1);
-      templateVertex[2] = vertsTemplate->at(_templateIndex * 3 + 2);
-
-      for(GLuint j=_targetStart; j<=_targetEnd; ++j)
-      {
-       three_j = 3*j;
-       targetVertex[0] = vertsTarget->at(three_j);
-       targetVertex[1] = vertsTarget->at(three_j + 1);
-       targetVertex[2] = vertsTarget->at(three_j + 2);
-
-       distance = euclideanDistance(templateVertex, targetVertex);
-       if(distance < minDistance)
-        {
-         auxUi[0] = targetVertex[0];
-         auxUi[1] = targetVertex[1];
-         auxUi[2] = targetVertex[2];
-         minDistance = distance;
-         foundCorrespondence = true;
-         targetIndex = j;
-        }
-       }
-
-        if(foundCorrespondence)
-        {
-          Vector3f ray = auxUi - templateVertex;
-          int intersection = m_template->whereIsIntersectingMesh(false, _templateIndex, templateVertex, ray);
-          if(intersection < 0) //No intersection - GooD!
-          {
-           // What about normals
-
-           // templateNormal = m_template->getNormal(_templateIndex);
-           // targetNormal = m_target->getNormal(targetIndex);
-           // dotProduct = getDotProduct(templateNormal, targetNormal);
-           // printf("Dot product IZ %f \n", dotProduct);
-
-           // if(dotProduct >= 0.0 && dotProduct <= 1.0)
-           // {
-               (*m_U)(_templateIndex, 0) = auxUi[0];
-               (*m_U)(_templateIndex, 1) = auxUi[1];
-               (*m_U)(_templateIndex, 2) = auxUi[2];
-           //  Addition to original algorithm
-           //  (*m_W)(_templateIndex) = exp(-minDistance/10);
-           // }
-           // else
-           // {
-           //  (*m_W)(_templateIndex) = 0.0;
-           // }
-          }
-          else
-          {
-           (*m_W)(_templateIndex) = 0.0;
-          }
-        }
-        else
-        {
-          (*m_W)(_templateIndex) = 0.0;
-        }
- }
 
 
 

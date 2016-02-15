@@ -22,7 +22,7 @@ HEADERS+= headers/matrix.h \
     headers/mesh.h \
     headers/NRICP.h \
     headers/NRICP_Segment.h \
-    headers/sphere_partition.h
+    headers/KDTreePartition.h
 
 INCLUDEPATH +=./headers
 

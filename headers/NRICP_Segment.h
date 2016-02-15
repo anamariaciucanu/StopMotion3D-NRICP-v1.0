@@ -5,7 +5,6 @@
 #include <Eigen>
 #include <src/LU/Inverse.h>
 #include <iostream>
-#include "sphere_partition.h"
 
 
 class NRICP_Segment
@@ -32,7 +31,6 @@ private:
    std::vector<GLuint>* m_targetSegmentLandmarks;
    std::set < std::pair<GLuint, GLuint> >* m_adjMat;
 
-   SpherePartition* m_targetPartition;
    VectorXi* m_hasLandmark;
    VectorXf* m_W;
    MatrixXf* m_U;
@@ -46,10 +44,6 @@ public:
    NRICP_Segment(Mesh* _template, Mesh* _target);
    ~NRICP_Segment();
    void initializeNRICP();
-
-   SpherePartition* createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition);
-   void destroyPartitions(SpherePartition *_partition);
-
    void buildVertexIndexArrays();
    void buildArcNodeMatrix();
    void buildVertexMatrix();
@@ -57,7 +51,6 @@ public:
    void buildLandmarkArrays();
    void addLandmarkInformation();
    void calculateNonRigidTransformation();
-   void findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd);
    void findCorrespondences();
    void determineNonRigidOptimalDeformation();
    void solveLinearSystem();

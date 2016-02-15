@@ -438,7 +438,7 @@ qmake_all: FORCE
 
 dist: 
 	@test -d obj/QtCamera1.0.0 || mkdir -p obj/QtCamera1.0.0
-	$(COPY_FILE) --parents $(DIST) obj/QtCamera1.0.0/ && $(COPY_FILE) --parents headers/matrix.h headers/glfwcontainer.h headers/load_functions.h headers/camera.h headers/shader.h headers/mesh.h headers/NRICP.h headers/NRICP_Segment.h headers/sphere_partition.h obj/QtCamera1.0.0/ && $(COPY_FILE) --parents src/main.cpp src/matrix.cpp src/glfwcontainer.cpp src/shader.cpp src/mesh.cpp src/NRICP.cpp src/NRICP_Segment.cpp obj/QtCamera1.0.0/ && (cd `dirname obj/QtCamera1.0.0` && $(TAR) QtCamera1.0.0.tar QtCamera1.0.0 && $(COMPRESS) QtCamera1.0.0.tar) && $(MOVE) `dirname obj/QtCamera1.0.0`/QtCamera1.0.0.tar.gz . && $(DEL_FILE) -r obj/QtCamera1.0.0
+	$(COPY_FILE) --parents $(DIST) obj/QtCamera1.0.0/ && $(COPY_FILE) --parents headers/matrix.h headers/glfwcontainer.h headers/load_functions.h headers/camera.h headers/shader.h headers/mesh.h headers/NRICP.h headers/NRICP_Segment.h headers/KDTreePartition.h obj/QtCamera1.0.0/ && $(COPY_FILE) --parents src/main.cpp src/matrix.cpp src/glfwcontainer.cpp src/shader.cpp src/mesh.cpp src/NRICP.cpp src/NRICP_Segment.cpp obj/QtCamera1.0.0/ && (cd `dirname obj/QtCamera1.0.0` && $(TAR) QtCamera1.0.0.tar QtCamera1.0.0 && $(COMPRESS) QtCamera1.0.0.tar) && $(MOVE) `dirname obj/QtCamera1.0.0`/QtCamera1.0.0.tar.gz . && $(DEL_FILE) -r obj/QtCamera1.0.0
 
 
 clean:compiler_clean 
@@ -743,7 +743,7 @@ obj/main.o: src/main.cpp headers/glfwcontainer.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
-		headers/sphere_partition.h \
+		headers/KDTreePartition.h \
 		headers/NRICP_Segment.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/main.o src/main.cpp
 
@@ -1016,7 +1016,7 @@ obj/glfwcontainer.o: src/glfwcontainer.cpp headers/glfwcontainer.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
-		headers/sphere_partition.h \
+		headers/KDTreePartition.h \
 		headers/NRICP_Segment.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/glfwcontainer.o src/glfwcontainer.cpp
 
@@ -1286,7 +1286,8 @@ obj/mesh.o: src/mesh.cpp headers/mesh.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
-		headers/matrix.h
+		headers/matrix.h \
+		headers/KDTreePartition.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/mesh.o src/mesh.cpp
 
 obj/NRICP.o: src/NRICP.cpp headers/NRICP.h \
@@ -1552,7 +1553,7 @@ obj/NRICP.o: src/NRICP.cpp headers/NRICP.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
 		headers/matrix.h \
-		headers/sphere_partition.h
+		headers/KDTreePartition.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/NRICP.o src/NRICP.cpp
 
 obj/NRICP_Segment.o: src/NRICP_Segment.cpp headers/NRICP_Segment.h \
@@ -1818,7 +1819,7 @@ obj/NRICP_Segment.o: src/NRICP_Segment.cpp headers/NRICP_Segment.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../../../Libs/eigen_1/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
 		headers/matrix.h \
-		headers/sphere_partition.h
+		headers/KDTreePartition.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/NRICP_Segment.o src/NRICP_Segment.cpp
 
 ####### Install

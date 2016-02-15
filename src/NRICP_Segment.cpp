@@ -6,9 +6,8 @@
 
 //(!) Observation: Paper proves that matrix A is nondegenerate and has column rank 4n...still, I believe
 // that since there are so many zeros in the matrix, values may become unstable, which is why we get so many artefacts
-
-
 //Indices are related to segment
+//TO DO: Debug to see why some transformations are taking so long
 
 NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
 {
@@ -20,7 +19,7 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
     m_landmarkSegmentCorrespCount = 0;
     m_templateSegmentEdgeCount = 0;
     m_beta = 1.0;
-    m_epsilon = 3.0;
+    m_epsilon = 5.0;
     m_gamma = 1.0;
     m_landmarksChanged = false;
 
@@ -30,7 +29,6 @@ NRICP_Segment::NRICP_Segment(Mesh* _template,  Mesh* _target)
     m_targetSegmentLandmarks = new std::vector<GLuint>();
     m_adjMat = NULL;
 
-    m_targetPartition = NULL;
     m_hasLandmark = new VectorXi();
     m_W = new VectorXf();
     m_U = new MatrixXf();
@@ -54,9 +52,6 @@ void NRICP_Segment::initializeNRICP()
     buildVertexMatrix(); //m_D
     initializeWUXSVectors(); //m_W, m_U, m_X
     buildLandmarkArrays(); //landmarks in segment indices
-
-    destroyPartitions(m_targetPartition);
-    m_targetPartition = createPartitions(0, m_targetSegmentVertCount-1, m_targetPartition);
 
     //Sparse matrices A and B
     m_templateSegmentEdgeCount = m_adjMat->size();
@@ -89,67 +84,6 @@ NRICP_Segment::~NRICP_Segment()
     if (m_targetSegmentLandmarks) { delete []  m_targetSegmentLandmarks; }
 
     m_adjMat->clear();
-    destroyPartitions(m_targetPartition);
-}
-
-
-SpherePartition* NRICP_Segment::createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition)
-{
-    GLuint three_i;
-
-    //Observation: This assumes vertex data is in order
-    _partition = new SpherePartition();
-    _partition->start = _start;
-    _partition->end = _end;
-    _partition->average[0] = 0.0;
-    _partition->average[1] = 0.0;
-    _partition->average[2] = 0.0;
-
-    std::vector<GLfloat>* targetVerts = m_target->getVertices();
-
-    for(GLuint i=_start; i<=_end; ++i)
-    {
-      three_i = 3 * m_targetSegmentVertIndices->at(i);
-      _partition->average[0] += targetVerts->at(three_i);
-      _partition->average[1] += targetVerts->at(three_i + 1);
-      _partition->average[2] += targetVerts->at(three_i + 2);
-    }
-
-     GLuint noElem = _end - _start + 1;
-
-    _partition->average[0] /= noElem;
-    _partition->average[1] /= noElem;
-    _partition->average[2] /= noElem;
-
-    if(noElem > 3)
-    {
-     _partition->left = createPartitions(_start, _start+noElem/2, _partition->left);
-     _partition->right = createPartitions(_start+noElem/2+1, _end, _partition->right);
-    }
-
-    return _partition;
-}
-
-
-void NRICP_Segment::destroyPartitions(SpherePartition* _partition)
-{
-    if(_partition)
-    {
-        if(!_partition->left && !_partition->right)
-        {
-            delete _partition;
-        }
-
-        if (_partition->right)
-        {
-           destroyPartitions(_partition->right);
-        }
-
-        if (_partition->left)
-        {
-           destroyPartitions(_partition->left);
-        }
-    }
 }
 
 
@@ -434,162 +368,69 @@ void NRICP_Segment::calculateNonRigidTransformation()
 
 void NRICP_Segment::findCorrespondences()
 {
-      Vector3f templateVertex;
-      GLfloat distance_left = 0.0;
-      GLfloat distance_right = 0.0;
-      m_W->setOnes();
+    Vector3f templateVertex;
+    Vector3f targetVertex;
+    GLuint templateIndex;
+    int targetIndex;
 
-      GLuint three_i;
-      std::vector<GLfloat>* templateVerts = m_template->getVertices();
+    //Very important to reset weights to 1
+    m_W->setOnes();
 
-      for (GLuint i=0; i<m_templateSegmentVertCount; ++i)
-      {
-          if(!(*m_hasLandmark)(i))
-          {
-           three_i = 3 * m_templateSegmentVertIndices->at(i);
-           templateVertex[0] = templateVerts->at(three_i);
-           templateVertex[1] = templateVerts->at(three_i + 1);
-           templateVertex[2] = templateVerts->at(three_i + 2);
-           SpherePartition* previous = NULL;
-           SpherePartition* aux = NULL;
-           SpherePartition* current = m_targetPartition;
 
-           while(current)
-           {
-             Vector3f targetSphere_left(1000.0, 1000.0, 1000.0);
-             Vector3f targetSphere_right(1000.0, 1000.0, 1000.0);
+    for (GLuint i=0; i<m_templateSegmentVertCount; ++i)
+    {
+      if(!(*m_hasLandmark)(i))
+        {
+           templateIndex = m_templateSegmentVertIndices->at(i);
+           templateVertex = m_template->getVertex(templateIndex);
+           targetIndex = m_target->findClosestPoint(templateVertex);
 
-              if(current->left)
-              {
-                targetSphere_left[0] = current->left->average[0];
-                targetSphere_left[1] = current->left->average[1];
-                targetSphere_left[2] = current->left->average[2];
-              }
+           if(targetIndex >= 0)
+            {
+              targetVertex = m_target->getVertex((GLuint)targetIndex);
+              Vector3f ray = targetVertex - templateVertex;
+              int intersection = m_template->whereIsIntersectingMesh(false, templateIndex, templateVertex, ray);
+              if(intersection < 0) //No intersection - GooD!
+               {
+                 // templateNormal = m_template->getNormal(i);
+                 // targetNormal = m_target->getNormal(targetIndex);
+                 // dotProduct = getDotProduct(templateNormal, targetNormal);
+                 // printf("Dot product IZ %f \n", dotProduct);
 
-              if(current->right)
-              {
-                  targetSphere_right[0] = current->right->average[0];
-                  targetSphere_right[1] = current->right->average[1];
-                  targetSphere_right[2] = current->right->average[2];
-              }
+                 // if(dotProduct >= 0.0 && dotProduct <= 1.0)
+                 // {
+                    (*m_U)(i, 0) = targetVertex[0];
+                    (*m_U)(i, 1) = targetVertex[1];
+                    (*m_U)(i, 2) = targetVertex[2];
+                 // }
+                 // else
+                 // {
+                 //  (*m_W)(i) = 0.0;
+                 // }
 
-              distance_left = euclideanDistance(templateVertex, targetSphere_left);
-              distance_right = euclideanDistance(templateVertex, targetSphere_right);
 
-              if(distance_left < distance_right)
-              {
-                aux = current;
-                previous = current;
-                current = aux->left;
-              }
-              else
-              {
-                  aux = current;
-                  previous = current;
-                  current = aux->right;
-              }
-          }
+                 //Modify weights based on the distance to the segmentation plane
+                 //Weight formula taken from Li et. al (2009)
+                   GLfloat dP = calculatePointToPlaneDistance(templateVertex);
 
-          if(previous)
-          {
-            findCorrespondences_Naive(i, 0, m_targetSegmentVertCount-1);
-            //TO FIX: Sphere hierarchy previous->start, previous->end);
-          }
-
-          else
-          {
-            (*m_W)(i) = 0.0;
-          }
-        }
-
-       //Distance plane weight
-       //   if((*m_W)(i) > 0.0)
-      //    {
-      //      (*m_W)(i) = calculateSegmentPlaneProximity(i);
-       //   }
+                   if(dP <= THRESHOLD)
+                    {
+                     GLfloat weight = max (0.0, 1 - pow((pow(dP, 2)/pow(RADIUS, 2)), 3));
+                     (*m_W)(i) = weight;
+                    }
+                }
+                else //There was a self-intersection in the template
+                {
+                 (*m_W)(i) = 0.0;
+                }
+             }
+             else //Target correspondence was not found
+             {
+               (*m_W)(i) = 0.0;
+             }
+      }
     }
 }
-
-void NRICP_Segment::findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd)
- {
-      //Find closest points between template and target mesh
-      //Store in U
-      //Store values in W - see 4.4.
-
-      Vector3f templateVertex;
-      Vector3f targetVertex;
-      GLfloat distance = 0.0;
-      GLfloat minDistance = 1000.0;
-      bool foundCorrespondence = false;
-      Vector3f auxUj(0.0, 0.0, 0.0);
-      GLuint three_j;
-
-      templateVertex = m_template->getVertex(m_templateSegmentVertIndices->at(_templateIndex));
-      std::vector<GLfloat>* targetVerts = m_target->getVertices();
-
-      for(GLuint j=_targetStart; j<=_targetEnd; ++j)
-      {
-       three_j = 3 * m_targetSegmentVertIndices->at(j);
-       targetVertex[0] =  targetVerts->at(three_j);
-       targetVertex[1] = targetVerts->at(three_j + 1);
-       targetVertex[2] = targetVerts->at(three_j + 2);
-
-       distance = euclideanDistance(templateVertex, targetVertex);
-       if(distance < minDistance)
-        {
-         auxUj[0] = targetVertex[0];
-         auxUj[1] = targetVertex[1];
-         auxUj[2] = targetVertex[2];
-         minDistance = distance;
-         foundCorrespondence = true;
-        }
-       }
-
-        if(foundCorrespondence)
-        {
-          Vector3f ray = auxUj - templateVertex;
-          int intersection = m_template->whereIsIntersectingMesh(false, m_templateSegmentVertIndices->at(_templateIndex), templateVertex, ray);
-          if(intersection < 0) //No intersection - GooD
-          {
-             (*m_U)(_templateIndex, 0) = auxUj[0];
-             (*m_U)(_templateIndex, 1) = auxUj[1];
-             (*m_U)(_templateIndex, 2) = auxUj[2];
-
-             //Modify weights based on the distance to the segmentation plane
-             //Weight formula taken from Li et. al (2009)
-             GLfloat dP = calculatePointToPlaneDistance(templateVertex);
-
-            if(dP <= THRESHOLD)
-             {
-              GLfloat weight = max (0.0, 1 - pow((pow(dP, 2)/pow(RADIUS, 2)), 3));
-              (*m_W)(_templateIndex) = weight;
-
-              /*
-              std::ofstream input1;
-              input1.open("../logs/distancePlane.txt",std::ios_base::app);
-              std::ofstream input2;
-              input2.open("../logs/weights.txt", std::ios_base::app);
-
-              input1 << dP <<"\n";
-              input2 << weight<<"\n";
-
-              input1.flush();
-              input2.flush();
-              input1.close();
-              input2.close();
-              */
-             }
-          }
-          else
-          {
-           (*m_W)(_templateIndex) = 0.0;
-          }
-        }
-        else
-        {
-          (*m_W)(_templateIndex) = 0.0;
-        }
- }
 
 
 void NRICP_Segment::determineNonRigidOptimalDeformation()

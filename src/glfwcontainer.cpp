@@ -79,7 +79,8 @@ void GLFWContainer::loadMesh(const char* _fileName)
     if(m_mesh[m_meshCount]->loadMesh(_fileName))
     {
          m_mesh[m_meshCount]->calculateNormals();
-         m_mesh[m_meshCount]->bindVAOs();    
+         m_mesh[m_meshCount]->bindVAOs();
+         m_mesh[m_meshCount]->partitionMesh();
          m_meshCount++;
     }
     else
@@ -364,13 +365,15 @@ void GLFWContainer::initializeDrawing()
     //Load a scene ============================================================================
     //float transformations[6] = {0.0, 0.0, 0.0, 0.7, 0.0, 0.0};
     loadMesh("../models/Hellidropter2_Mesh.obj");
-    // loadMesh("../models/Cube1.obj");
-    // m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
+    //loadMesh("../models/Hellidropter2.obj");
+    //loadMesh("../models/Cube1.obj");
+    //m_mesh[0]->rotateObject(transformations[0], transformations[1], transformations[2]);
     //m_mesh[0]->moveObject(transformations[3], transformations[4], transformations[5]);
 
     loadMesh("../models/Hellidropter1_Mesh.obj");
+    //loadMesh("../models/Hellidropter1.obj");
     //loadMesh("../models/Cube2.obj");
-   // m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
+    //m_mesh[1]->rotateObject(transformations[0], transformations[1], transformations[2]);
     //m_mesh[1]->moveObject(-transformations[3], transformations[4], transformations[5]);
 
 

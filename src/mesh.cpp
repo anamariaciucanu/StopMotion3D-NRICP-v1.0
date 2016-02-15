@@ -15,23 +15,22 @@ using namespace Eigen;
 Mesh::Mesh()
 {
     m_vertices = new std::vector<GLfloat>();
-    m_vertNormalLines = new std::vector<GLfloat>();
     m_normals = new std::vector<GLfloat>();
     m_texcoords = new std::vector<GLfloat>();
     m_faceIndices = new std::vector<GLuint>();
+    m_partitionRoot = NULL;
     m_adjMat = NULL;
     m_D = NULL;
-    m_position[0] = 0.0;
-    m_position[1] = 0.0;
-    m_position[2] = 0.0;
+    m_centre[0] = 0.0;
+    m_centre[1] = 0.0;
+    m_centre[2] = 0.0;
     m_vertCount = 0;
     m_edgeCount = 0;
     m_faceCount = 0;
     m_texCoordCount = 0;
     m_pickedIndex = -1;
     m_wireframe = false;
-    m_modified = false;
-    m_landmarkVertexIndices = new std::vector<int>();   
+    m_landmarkVertexIndices = new std::vector<int>();
     m_segmentationRoot = NULL;
     m_segmentationMode = false;
     m_segmentsIndices = new std::vector<GLuint>();
@@ -44,11 +43,6 @@ Mesh::~Mesh()
  if(m_vertices)
  {
    delete [] m_vertices;
- }
-
- if(m_vertNormalLines)
- {
-   delete [] m_vertNormalLines;
  }
 
  if(m_normals)
@@ -87,26 +81,13 @@ Mesh::~Mesh()
  }
 
  destroySegments(m_segmentationRoot);
+ destroyMeshPartitions(m_partitionRoot);
 }
 
-void Mesh::setVertex(GLuint _vertNo, Vector3f _value)
-{
-    GLuint three_i = 3 * _vertNo;
-    GLuint four_i = 4 * _vertNo;
-    m_vertices->at(three_i) = _value[0];
-    m_vertices->at(three_i + 1) = _value[1];
-    m_vertices->at(three_i + 2) = _value[2];
 
-    if(m_D)
-    {
-        m_D->coeffRef(_vertNo, four_i) = _value[0];
-        m_D->coeffRef(_vertNo, four_i + 1) = _value[1];
-        m_D->coeffRef(_vertNo, four_i + 2) = _value[2];
-    }
-}
-
+//Create mesh -----------------------------
 bool Mesh::loadMesh(const char *_fileName)
-{    
+{
     ifstream in(_fileName, ios::in);
     if (!in)
     {
@@ -199,28 +180,54 @@ bool Mesh::loadMesh(const char *_fileName)
 
           continue;
         }
-     }    
+     }
 
     moveToCentre();
-    calculatePosition();
+    calculateCentre();
 
     return true;
 }
 
-void Mesh::printLandmarkedPoints(const char*_fileName)
+void Mesh::normaliseMesh()
 {
-  ofstream file;
-  file.open(_fileName);
-  GLuint size = m_landmarkVertexIndices->size();
+ //Find min and max for x, y, z
+ GLfloat min_x = 1000.0;
+ GLfloat min_y = 1000.0;
+ GLfloat min_z = 1000.0;
+ GLfloat max_x = -1000.0;
+ GLfloat max_y = -1000.0;
+ GLfloat max_z = -1000.0;
+ GLfloat aux;
+ GLuint three_i;
 
-  for(GLuint i=0; i<size; ++i)
+ for (GLuint i = 0; i < m_vertCount; ++i)
   {
-   file << m_landmarkVertexIndices->at(i);
-   file << "\n";
-  }
+        three_i = 3*i;
 
-  file.flush();
-  file.close();
+        aux = m_vertices->at(three_i);
+        if(aux < min_x) { min_x = aux;}
+        else if (aux > max_x) { max_x = aux;}
+
+        aux = m_vertices->at(three_i + 1);
+        if(aux < min_y) { min_y = aux;}
+        else if (aux > max_y) { max_y = aux;}
+
+        aux = m_vertices->at(three_i + 2);
+        if(aux < min_z) { min_z = aux;}
+        else if (aux > max_z) { max_z = aux;}
+    }
+
+    for (GLuint i = 0; i < m_vertCount; ++i)
+    {
+        three_i = 3*i;
+        GLfloat x  = m_vertices->at(three_i);
+        GLfloat y = m_vertices->at(three_i + 1);
+        GLfloat z = m_vertices->at(three_i + 2) ;
+
+        m_vertices->at(three_i) = 2.0 * (x - min_x) / (max_x - min_x) - 1.0;
+        m_vertices->at(three_i + 1) = 2.0 * (y - min_y) / (max_y - min_y) - 1.0;
+        m_vertices->at(three_i + 2) = 2.0 * (z - min_z) / (max_z - min_z) - 1.0;
+    }
 }
 
 void Mesh::calculateNormals()
@@ -304,81 +311,159 @@ void Mesh::normaliseNormals()
     }
 }
 
-void Mesh::buildVertexNormalVector()
+void Mesh::partitionMesh()
+{
+ std::vector<int> pointList;
+
+ for(int i=0; i<(int)m_vertCount; ++i)
  {
-     if(m_vertNormalLines->size()<1)
-     {
-         for(GLuint k=0; k < m_vertCount * 6; ++k)
-         {
-           m_vertNormalLines->push_back(0.0);
-         }
-     }
-     else
-     {
-       for(GLuint k=0; k<m_vertNormalLines->size(); ++k)
-       {
-         m_vertNormalLines->at(k) = 0.0;
-       }
-     }
-
-     GLuint three_i;
-     GLfloat alpha = 1.01;
-     GLfloat beta = 0.5;
-
-     for (GLuint i=0; i < m_vertCount; ++i)
-     {
-         three_i = 3*i;
-         m_vertNormalLines->at(three_i) = alpha * m_vertices->at(three_i);
-         m_vertNormalLines->at(three_i + 1) = alpha * m_vertices->at(three_i + 1);
-         m_vertNormalLines->at(three_i + 2) = alpha * m_vertices->at(three_i + 2);
-         m_vertNormalLines->at(three_i + 3) = m_vertices->at(three_i) + beta * m_normals->at(three_i);
-         m_vertNormalLines->at(three_i + 4) = m_vertices->at(three_i + 1) + beta * m_normals->at(three_i + 1);
-         m_vertNormalLines->at(three_i + 5) = m_vertices->at(three_i + 2) + beta * m_normals->at(three_i + 2);
-     }
+   pointList.push_back(i);
  }
 
-void Mesh::normaliseMesh()
+ if(m_partitionRoot == NULL)
+ {
+  m_partitionRoot = new KDTreeNode();
+ }
+
+ partitionMeshIteration(m_partitionRoot, pointList, 0);
+}
+
+void Mesh::partitionMeshIteration(KDTreeNode* _root, std::vector<int> _pointList, int _depth)
 {
- //Find min and max for x, y, z
- GLfloat min_x = 1000.0;
- GLfloat min_y = 1000.0;
- GLfloat min_z = 1000.0;
- GLfloat max_x = -1000.0;
- GLfloat max_y = -1000.0;
- GLfloat max_z = -1000.0;
- GLfloat aux;
- GLuint three_i;
+    int three_i, three_j, aux_index;
+    int pointCount = _pointList.size();
+    int medianVertexIndex;
+    int axis = _depth % 3;
 
- for (GLuint i = 0; i < m_vertCount; ++i)
-  {
-        three_i = 3*i;
+    //Round robin kDTree approach
+    //Wiki says it was invented by Bentley et. al (1975)
 
-        aux = m_vertices->at(three_i);
-        if(aux < min_x) { min_x = aux;}
-        else if (aux > max_x) { max_x = aux;}
-
-        aux = m_vertices->at(three_i + 1);
-        if(aux < min_y) { min_y = aux;}
-        else if (aux > max_y) { max_y = aux;}
-
-        aux = m_vertices->at(three_i + 2);
-        if(aux < min_z) { min_z = aux;}
-        else if (aux > max_z) { max_z = aux;}
-    }
-
-    for (GLuint i = 0; i < m_vertCount; ++i)
+    if(pointCount>1)
     {
-        three_i = 3*i;
-        GLfloat x  = m_vertices->at(three_i);
-        GLfloat y = m_vertices->at(three_i + 1);
-        GLfloat z = m_vertices->at(three_i + 2) ;
+      std::vector<int> pointListLeft;
+      std::vector<int> pointListRight;
+      GLfloat term1, term2;
 
-        m_vertices->at(three_i) = 2.0 * (x - min_x) / (max_x - min_x) - 1.0;
-        m_vertices->at(three_i + 1) = 2.0 * (y - min_y) / (max_y - min_y) - 1.0;
-        m_vertices->at(three_i + 2) = 2.0 * (z - min_z) / (max_z - min_z) - 1.0;
+     //Selection sort pointlist by axis component =>N^2 complexity (TO DO: Improve sorting)
+      for (int i=0; i<pointCount-1; ++i)
+      {
+        for(int j=i+1; j<pointCount; ++j)
+        {
+            three_i = 3 * _pointList.at(i);
+            three_j = 3 * _pointList.at(j);
+            term1 = m_vertices->at(three_i + axis);
+            term2 = m_vertices->at(three_j + axis);
+            if(term1 > term2)
+            {
+                aux_index = _pointList.at(i);
+                _pointList.at(i) = _pointList.at(j);
+                _pointList.at(j) = aux_index;
+            }
+        }
+       }
+
+     _root->m_axis = axis;
+     medianVertexIndex = _pointList.at(pointCount/2);
+     _root->m_median = m_vertices->at(medianVertexIndex*3 + axis);
+
+     for (int i=0; i<pointCount/2; ++i)
+     {
+      pointListLeft.push_back(_pointList.at(i));
+     }
+
+     for(int i=pointCount/2; i<pointCount; ++i)
+     {
+      pointListRight.push_back(_pointList.at(i));
+     }
+
+     _root->m_left = new KDTreeNode();
+     _root->m_right = new KDTreeNode();
+
+     partitionMeshIteration(_root->m_left, pointListLeft, _depth+1);
+     partitionMeshIteration(_root->m_right, pointListRight, _depth+1);
+    }
+    else
+    {
+     _root->m_vertexIndex = _pointList.at(pointCount-1);
     }
 }
 
+void Mesh::destroyMeshPartitions(KDTreeNode* _root)
+{
+    if(_root)
+    {
+        if(!_root->m_left && !_root->m_right)
+        {
+            delete _root;
+        }
+
+        if (_root->m_right)
+        {
+           destroyMeshPartitions(_root->m_right);
+        }
+
+        if (_root->m_left)
+        {
+           destroyMeshPartitions(_root->m_left);
+        }
+    }
+}
+
+int Mesh::findClosestPoint(Vector3f _query)
+{
+  int refPoint = 0;
+  float refDistance = 1000;
+  findClosestPointIteration1(_query, m_partitionRoot, refPoint, refDistance);
+  return refPoint;
+}
+
+ void Mesh::findClosestPointIteration1(Vector3f _query, KDTreeNode* _root, int &_refPoint, float &_refDistance)
+ {
+    //Algorithm taken from
+    //http://andrewd.ces.clemson.edu/courses/cpsc805/references/nearest_search.pdf
+
+    if(_root->m_left == NULL && _root->m_right == NULL)
+    {
+      float distance = euclideanDistance(_query, getVertex(_root->m_vertexIndex));
+
+      if(distance < _refDistance)
+      {
+        _refDistance = distance;
+        _refPoint = _root->m_vertexIndex;
+      }
+    }
+    else
+    {
+      int axis = _root->m_axis;
+      if(_query[axis] <= _root->m_median)
+      {
+        //Search left first
+        if(_query[axis] - _refDistance <= _root->m_median)
+        {
+          findClosestPointIteration1(_query, _root->m_left, _refPoint, _refDistance);
+        }
+        if(_query[axis] + _refDistance > _root->m_median)
+        {
+          findClosestPointIteration1(_query, _root->m_right, _refPoint, _refDistance);
+        }
+      }
+      else
+      {
+        //Search right first
+         if(_query[axis] + _refDistance > _root->m_median)
+          {
+            findClosestPointIteration1(_query, _root->m_right, _refPoint, _refDistance);
+          }
+          if(_query[axis] - _refDistance <= _root->m_median)
+          {
+            findClosestPointIteration1(_query, _root->m_left, _refPoint, _refDistance);
+          }
+      }
+    }
+ }
+
+
+//Drawing --------------------------
 void Mesh::bindVAOs()
 {
     //VAO
@@ -434,7 +519,7 @@ void Mesh::bindVAOs()
    {
       printf("ERROR: No vertices! \n");
       return;
-   }  
+   }
 }
 
 void Mesh::unbindVAOs()
@@ -445,8 +530,10 @@ void Mesh::unbindVAOs()
  glDeleteVertexArrays(1, &m_vao);
 }
 
+
+//Build sparse matrices -----------------------
 void Mesh::buildArcNodeMatrix()
-{   
+{
   //Create the arc-node adjacency matrix
 
     if(!m_adjMat)
@@ -550,32 +637,8 @@ void Mesh::buildNeighbourList()
  }
 }
 
-Vector3f Mesh::getNormal(GLuint _vertNo)
-{
-    Vector3f normal(0.0, 0.0, 0.0);
 
-    if(m_vertCount > _vertNo)
-    {
-        normal[0] = m_normals->at(_vertNo * 3);
-        normal[1] = m_normals->at(_vertNo * 3 + 1);
-        normal[2] = m_normals->at(_vertNo * 3 + 2);
-    }
-    return normal;
-}
-
-Vector3f Mesh::getVertex(GLuint _vertNo)
-{
-    Vector3f vert(0.0, 0.0, 0.0);
-
-    if(m_vertCount > _vertNo)
-    {
-     vert[0] = m_vertices->at(_vertNo * 3);
-     vert[1] = m_vertices->at(_vertNo * 3 + 1);
-     vert[2] = m_vertices->at(_vertNo * 3 + 2);
-    }
-    return vert;
-}
-
+//Mesh analysis ----------------------------
 bool Mesh::findInListOfNeighbours(int _neighbour1, int _neighbour2)
 {
   std::vector<int> neighbours = m_neighbours->at(_neighbour1);
@@ -787,6 +850,9 @@ int Mesh::whereIsIntersectingMesh(bool _culling, int _originTemplateIndex, Vecto
  return -1;
 }
 
+
+//Transformations of mesh --------------------
+//TO DO: Test them
 void Mesh::affineTransformation(MatrixXf _X)
 {
     GLuint three_i;
@@ -807,16 +873,7 @@ void Mesh::affineTransformation(MatrixXf _X)
         m_vertices->at(three_i + 1) = vertex[1];
         m_vertices->at(three_i + 2) = vertex[2];
     }
-    calculatePosition();
-}
-
-float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
-{
- float diff1 = _v1[0] - _v2[0];
- float diff2 = _v1[1] - _v2[1];
- float diff3 = _v1[2] - _v2[2];
-
- return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+    calculateCentre();
 }
 
 void Mesh::moveObject(float _tX, float _tY, float _tZ)
@@ -840,20 +897,41 @@ void Mesh::moveObject(float _tX, float _tY, float _tZ)
      m_vertices->at(three_i + 2) = vertex.v[2];
   }
 
-  calculatePosition();
+  calculateCentre();
 }
 
 void Mesh::moveObject(Vector3f _trans)
 {
   moveObject(_trans[0], _trans[1], _trans[2]);
-  calculatePosition();
+  calculateCentre();
+}
+
+void Mesh::calculateCentre()
+{
+    GLuint three_i;
+    m_centre[0] = 0.0;
+    m_centre[1] = 0.0;
+    m_centre[2] = 0.0;
+
+    for(GLuint i=0; i<m_vertCount; ++i)
+    {
+        three_i = 3*i;
+
+        m_centre[0] += m_vertices->at(three_i);
+        m_centre[1] += m_vertices->at(three_i + 1);
+        m_centre[2] += m_vertices->at(three_i + 2);
+    }
+
+    m_centre[0] /= m_vertCount;
+    m_centre[1] /= m_vertCount;
+    m_centre[2] /= m_vertCount;
 }
 
 void Mesh::moveToCentre()
 {
-   calculatePosition();
-   moveObject(-m_position[0], -m_position[1], -m_position[2]);
-   calculatePosition();
+   calculateCentre();
+   moveObject(-m_centre[0], -m_centre[1], -m_centre[2]);
+   calculateCentre();
 }
 
 void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
@@ -880,7 +958,7 @@ void Mesh::rotateObject(float _angleX, float _angleY, float _angleZ)
      m_vertices->at(three_i + 2) = vertex.v[2];
   }
 
-  calculatePosition();
+  calculateCentre();
 }
 
 void Mesh::rotateObject(Matrix3f _R)
@@ -902,9 +980,11 @@ void Mesh::rotateObject(Matrix3f _R)
        m_vertices->at(three_i + 2) = vertex[2];
     }
 
-    calculatePosition();
+    calculateCentre();
 }
 
+
+//Eigenvectors -----------------------
 bool Mesh::areEigenvectorsOrthogonal()
 {
     Vector3f v1;
@@ -950,7 +1030,7 @@ void Mesh::rotateByEigenVectors()
       for(GLuint k=0; k<3; ++k)
       {
         for(GLuint l=0; l<3; ++l)
-        {            
+        {
             if(A(k,l) > 0.8)
             {
               B(k,l) = 1.0;
@@ -983,7 +1063,7 @@ void Mesh::rotateByEigenVectors()
         m_vertices->at(three_i + 2) = vertex[2];
       }
 
-      calculatePosition();
+      calculateCentre();
    }
   else
   {
@@ -1025,28 +1105,8 @@ void Mesh::calculateEigenvectors()
     m_eigenvalues = es.eigenvalues();
 }
 
-void Mesh::calculatePosition()
-{
-    GLuint three_i;
-    m_position[0] = 0.0;
-    m_position[1] = 0.0;
-    m_position[2] = 0.0;
 
-    for(GLuint i=0; i<m_vertCount; ++i)
-    {
-        three_i = 3*i;
-
-        m_position[0] += m_vertices->at(three_i);
-        m_position[1] += m_vertices->at(three_i + 1);
-        m_position[2] += m_vertices->at(three_i + 2);
-    }
-
-    m_position[0] /= m_vertCount;
-    m_position[1] /= m_vertCount;
-    m_position[2] /= m_vertCount;
-}
-
-
+//Segmentation -----------------------
 void Mesh::segmentMesh()
 {
     GLuint size = m_landmarkVertexIndices->size();
@@ -1104,7 +1164,7 @@ void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>*
      face[1] = _parentSideFaces->at(three_i + 1);
      face[2] = _parentSideFaces->at(three_i + 2);
 
-     faceCentre = calculateCentre(face[0], face[1], face[2]);
+     faceCentre = calculateTriangleCentre(face[0], face[1], face[2]);
      planeFaceDirection = faceCentre - _planeCentre;
      planeFaceDirection.normalize();
      dot_directions = _planeNormal.dot(planeFaceDirection);
@@ -1126,7 +1186,6 @@ void Mesh::splitSegmentIntoSubsegments(Segmentation* _root, std::vector<GLuint>*
     }
 }
 
-
 Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Segmentation* _root, std::vector<GLuint>* _parentSideFaces)
 {
     if(_root)
@@ -1143,7 +1202,7 @@ Segmentation* Mesh::segmentationProcedure(Vector3i _plane, Vector3f _normal, Seg
         _root->m_visited = false;
         _root->m_leftFaces = new std::vector<GLuint>();
         _root->m_rightFaces = new std::vector<GLuint>();
-        Vector3f planeCentre = calculateCentre(_plane[0], _plane[1], _plane[2]);
+        Vector3f planeCentre = calculateTriangleCentre(_plane[0], _plane[1], _plane[2]);
 
       if(_parentSideFaces)
         {
@@ -1211,7 +1270,6 @@ void Mesh::createSegmentList()
   }
 }
 
-
 void Mesh::destroySegments(Segmentation* _segmentation)
 {
   if(_segmentation)
@@ -1240,7 +1298,8 @@ void Mesh::destroySegments(Segmentation* _segmentation)
 }
 
 
-Vector3f Mesh::calculateCentre(int _p1, int _p2, int _p3)
+//Auxiliaries ------------------------
+Vector3f Mesh::calculateTriangleCentre(int _p1, int _p2, int _p3)
 {
    Vector3f point1;
    Vector3f point2;
@@ -1256,11 +1315,10 @@ Vector3f Mesh::calculateCentre(int _p1, int _p2, int _p3)
    return (point1 + point2 + point3)/3;
 }
 
-
 Vector3f Mesh::calculateActiveSegmentationPlaneCentre()
 {
     Vector3i activePlane = getActivePlane();
-    return calculateCentre(activePlane[0], activePlane[1], activePlane[2]);
+    return calculateTriangleCentre(activePlane[0], activePlane[1], activePlane[2]);
 }
 
 Vector3f Mesh::calculateActiveSegmentationPlaneNormal()
@@ -1277,6 +1335,81 @@ Vector3f Mesh::calculateActiveSegmentationPlaneNormal()
 
     return (point2 - point1).cross(point3 - point1);
 }
+
+float Mesh::euclideanDistance(Vector3f _v1, Vector3f _v2)
+{
+ float diff1 = _v1[0] - _v2[0];
+ float diff2 = _v1[1] - _v2[1];
+ float diff3 = _v1[2] - _v2[2];
+
+ return sqrt(diff1 * diff1 + diff2 * diff2 + diff3 * diff3);
+}
+
+
+void Mesh::printLandmarkedPoints(const char*_fileName)
+{
+  ofstream file;
+  file.open(_fileName);
+  GLuint size = m_landmarkVertexIndices->size();
+
+  for(GLuint i=0; i<size; ++i)
+  {
+   file << m_landmarkVertexIndices->at(i);
+   file << "\n";
+  }
+
+  file.flush();
+  file.close();
+}
+
+
+//Setters and Getters ------------------------------------
+void Mesh::setVertex(GLuint _vertNo, Vector3f _value)
+{
+    GLuint three_i = 3 * _vertNo;
+    GLuint four_i = 4 * _vertNo;
+    m_vertices->at(three_i) = _value[0];
+    m_vertices->at(three_i + 1) = _value[1];
+    m_vertices->at(three_i + 2) = _value[2];
+
+    if(m_D)
+    {
+        m_D->coeffRef(_vertNo, four_i) = _value[0];
+        m_D->coeffRef(_vertNo, four_i + 1) = _value[1];
+        m_D->coeffRef(_vertNo, four_i + 2) = _value[2];
+    }
+}
+
+
+Vector3f Mesh::getVertex(GLuint _vertNo)
+{
+    Vector3f vert(0.0, 0.0, 0.0);
+
+    if(m_vertCount > _vertNo)
+    {
+     vert[0] = m_vertices->at(_vertNo * 3);
+     vert[1] = m_vertices->at(_vertNo * 3 + 1);
+     vert[2] = m_vertices->at(_vertNo * 3 + 2);
+    }
+    return vert;
+}
+
+
+Vector3f Mesh::getNormal(GLuint _vertNo)
+{
+    Vector3f normal(0.0, 0.0, 0.0);
+
+    if(m_vertCount > _vertNo)
+    {
+        normal[0] = m_normals->at(_vertNo * 3);
+        normal[1] = m_normals->at(_vertNo * 3 + 1);
+        normal[2] = m_normals->at(_vertNo * 3 + 2);
+    }
+    return normal;
+}
+
+
+
 
 
 

@@ -1,5 +1,3 @@
-//TO DO: k-D trees for meshes? or add a sphere hierarchy to template meshes to help with ray intersection
-
 #ifndef NRICP_H
 #define NRICP_H
 
@@ -12,7 +10,6 @@
 #include <Eigen>
 #include <src/LU/Inverse.h>
 #include <iostream>
-#include "sphere_partition.h"
 
 ///@brief Structure linking the elements of a sphere hierarchy
 ///@param average -> the average position of he vertices between start and end
@@ -59,8 +56,6 @@ class NRICP
     MatrixXf* m_U;
  ///@brief Pointer to a dynamic float matrix -> contains the transformation per mesh, per vertex matrix, from NRICP algorithm
     MatrixXf* m_X;
- ///@brief Pointer to hierarchical sphere structure of the target vertex information
-    SpherePartition* m_targetPartition;
  ///@brief Pointer to a sparse matrix of floats -> m_A matrix from NRICP, used to determine m_X
     SparseMatrix<GLfloat, ColMajor>* m_A;
  ///@brief Pointer to a sparse matrix of floats -> m_B matrix from NRICP, used to determine m_X
@@ -77,24 +72,12 @@ class NRICP
     ~NRICP();
     ///@brief initializes elements needed before the algorithm starts
     void initializeNRICP();
-    ///@brief creates sphere hierarchy partitions
-    ///@param [in] _start, _end Unsigned integers -> the start and end indices of a partition
-    ///@param [in] _partition -> the parent partition for the new hierarchy member to be created
-    ///@param [out] Pointer to Sphere Partition hierarchy memebr created
-    SpherePartition* createPartitions(GLuint _start, GLuint _end, SpherePartition* _partition);
-    ///@brief destroys the sphere hierarchy tree
-    ///@param [in] Pointer to sphere partition -> the root of the hierarchy
-    void destroyPartitions(SpherePartition *_partition);
     ///@brief asks the template mesh to build the vertex matrix, m_D
     void buildVertexMatrix();
     ///@brief performs an NRICP transformation on the template, to morph it closer to the target mesh
     void calculateNonRigidTransformation();
     ///@brief performs a hybrid ICP transformation on the template, to morph it closer to the target mesh   
     void calculateRigidTransformation();
-    ///@brief finds the closest target vertex to the template vertex, from a restrained group of target vertices
-    ///@param [in] _templateIndex Unsigned integer -> the index of the template vertex
-    ///@param [in] _targetStart, _targetEnd Unsigned integers -> the start and end vertex indices on the target mesh
-    void findCorrespondences_Naive(GLuint _templateIndex, GLuint _targetStart, GLuint _targetEnd);
     ///@brief Fills in m_U with target correspondences for every template vertex
     void findCorrespondences();
     ///@brief Finds m_X transformation matrix for the template mesh for NRICP
